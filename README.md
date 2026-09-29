@@ -1,26 +1,25 @@
 # Radiology Intelligence
 
-Evidence-based insights for radiologic technologists and imaging professionals.
+영상의학의 연구, AI, 환자안전, 운영, 교육, 정책 변화를 근거 중심으로 해설하는 공개 사이트입니다.
 
 **Live site:** https://chunghwan-kang.github.io/radiology-intelligence/
 
-## Repository
-`ChungHwan-Kang/radiology-intelligence`
+## Design baseline
+- v0.4 approved on 2026-09-30
+- Korean-first content
+- Toss Tech-inspired light neutral palette and blue accent
+- Minimal decoration, high Korean readability
+- Published content only; no placeholder articles
 
 ## Current site
-- `index.html` — home
-- `about.html` — editorial policy and channel description
-- `styles.css` — responsive site styles
-- `posts/rb-059-mri-repeat.html` — first published insight
-- `404.html` — error page
-- `.nojekyll` — disable Jekyll processing
-
-## Deployment
-GitHub Pages publishes from the `main` branch, root (`/`).
-
-Initial Pages build/deployment completed successfully on 2026-09-29.
+- `index.html` — 홈
+- `about.html` — 소개·편집 원칙
+- `styles.css` — 공통 스타일
+- `posts/rb-059-mri-repeat.html` — 첫 공개 해설
+- `404.html` — 오류 페이지
+- `.nojekyll` — Jekyll 처리 비활성화
 
 ## Editorial workflow
-Master Index → Deep Dive → Content Review → Public-ready → Published → Society-shared.
+Master Index → Deep Dive → Content Review → Public-ready → Published → Society-shared
 
-Only Public-ready items should be promoted to the public site after review.
+Public-ready 검토가 끝난 콘텐츠만 공개 사이트에 게시합니다.
