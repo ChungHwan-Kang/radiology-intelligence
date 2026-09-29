@@ -1,25 +1,26 @@
-# Radiology Intelligence — Static Site v0.1
+# Radiology Intelligence
 
-Free, dependency-free static site prepared for GitHub Pages.
+Evidence-based insights for radiologic technologists and imaging professionals.
+
+**Live site:** https://chunghwan-kang.github.io/radiology-intelligence/
 
 ## Repository
 `ChungHwan-Kang/radiology-intelligence`
 
-## Files
+## Current site
 - `index.html` — home
 - `about.html` — editorial policy and channel description
 - `styles.css` — responsive site styles
-- `posts/rb-059-mri-repeat.html` — first public-ready article
+- `posts/rb-059-mri-repeat.html` — first published insight
 - `404.html` — error page
 - `.nojekyll` — disable Jekyll processing
 
 ## Deployment
-GitHub Pages should publish from the `main` branch, root (`/`).
+GitHub Pages publishes from the `main` branch, root (`/`).
 
-Expected URL:
-`https://chunghwan-kang.github.io/radiology-intelligence/`
+Initial Pages build/deployment completed successfully on 2026-09-29.
 
 ## Editorial workflow
-Master Index → Deep Dive → Content Review → Public-ready → Published.
+Master Index → Deep Dive → Content Review → Public-ready → Published → Society-shared.
 
-Do not publish Private or Reviewed-only items.
+Only Public-ready items should be promoted to the public site after review.
