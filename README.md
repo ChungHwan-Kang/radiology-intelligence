@@ -15,7 +15,9 @@
 - `index.html` — 홈
 - `about.html` — 소개·편집 원칙
 - `styles.css` — 공통 스타일
-- `posts/rb-059-mri-repeat.html` — 첫 공개 해설
+- `posts/rb-059-mri-repeat.html` — MRI 반복 촬영과 운영 부담
+- `posts/rb-037-inpatient-mri-safety.html` — 입원환자 MRI 위험도 기반 안전관리
+- `posts/rb-064-rsna-ai-certificate.html` — 영상의학 AI 교육과 임상 활용 역량
 - `404.html` — 오류 페이지
 - `.nojekyll` — Jekyll 처리 비활성화
 
