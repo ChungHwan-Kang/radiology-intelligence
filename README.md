@@ -10,9 +10,11 @@
 - Toss Tech-inspired light neutral palette and blue accent
 - Minimal decoration, high Korean readability
 - Published content only; no placeholder articles
+- Mobile navigation and reading QA refined on 2026-10-04
 
-## Current site
-- `index.html` — 홈
+## Site structure
+- `index.html` — 홈 / 최신 해설
+- `categories.html` — 7개 주제별 보기
 - `about.html` — 소개·편집 원칙
 - `styles.css` — 공통 스타일
 - `posts/rb-059-mri-repeat.html` — MRI 반복 촬영과 운영 부담
@@ -20,6 +22,17 @@
 - `posts/rb-064-rsna-ai-certificate.html` — 영상의학 AI 교육과 임상 활용 역량
 - `404.html` — 오류 페이지
 - `.nojekyll` — Jekyll 처리 비활성화
+
+## Categories
+1. MRI·영상기술
+2. AI·디지털 영상의학
+3. 환자안전·품질
+4. 인력·운영
+5. 교육·자격
+6. 정책·전문직
+7. 연구·근거
+
+한 글은 여러 주제에 동시에 포함될 수 있습니다.
 
 ## Editorial workflow
 Master Index → Deep Dive → Content Review → Public-ready → Published → Society-shared
