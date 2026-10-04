@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://chunghwan-kang.github.io/radiology-intelligence/sitemap.xml

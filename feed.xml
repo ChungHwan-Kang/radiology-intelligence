@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+<channel>
+  <title>Radiology Intelligence</title>
+  <link>https://chunghwan-kang.github.io/radiology-intelligence/</link>
+  <description>영상의학의 연구, AI, 환자안전, 운영, 교육, 정책 변화를 근거 중심으로 해설합니다.</description>
+  <language>ko-KR</language>
+  <lastBuildDate>Sun, 04 Oct 2026 03:30:00 GMT</lastBuildDate>
+  <atom:link href="https://chunghwan-kang.github.io/radiology-intelligence/feed.xml" rel="self" type="application/rss+xml"/>
+  <item><title>영상의학 AI 교육, 이제 ‘AI를 아는 것’보다 ‘어떻게 쓸 것인가’가 중요하다</title><link>https://chunghwan-kang.github.io/radiology-intelligence/posts/rb-064-rsna-ai-certificate.html</link><guid isPermaLink="true">https://chunghwan-kang.github.io/radiology-intelligence/posts/rb-064-rsna-ai-certificate.html</guid><pubDate>Sat, 03 Oct 2026 00:00:00 +0900</pubDate><description>RSNA Imaging AI Certificate v2.0을 바탕으로 영상의학 AI 교육의 평가·도입·모니터링 역량 변화를 해설합니다.</description></item>
+  <item><title>입원환자 MRI 안전, ‘검사 가능 여부’만 확인해서는 부족하다</title><link>https://chunghwan-kang.github.io/radiology-intelligence/posts/rb-037-inpatient-mri-safety.html</link><guid isPermaLink="true">https://chunghwan-kang.github.io/radiology-intelligence/posts/rb-037-inpatient-mri-safety.html</guid><pubDate>Sat, 03 Oct 2026 00:00:00 +0900</pubDate><description>위험도 분류와 EMR 연동을 활용한 다기관 연구를 바탕으로 입원환자 MRI 안전관리의 범위를 해설합니다.</description></item>
+  <item><title>MRI 재촬영, 단순한 ‘한 번 더’가 아니다</title><link>https://chunghwan-kang.github.io/radiology-intelligence/posts/rb-059-mri-repeat.html</link><guid isPermaLink="true">https://chunghwan-kang.github.io/radiology-intelligence/posts/rb-059-mri-repeat.html</guid><pubDate>Tue, 29 Sep 2026 00:00:00 +0900</pubDate><description>8만5천 건의 MRI 연구를 바탕으로 반복 촬영의 빈도, 장비 사용시간, 진단적 이득을 함께 해설합니다.</description></item>
+</channel>
+</rss>
