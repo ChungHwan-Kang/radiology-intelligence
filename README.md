@@ -20,6 +20,9 @@
 - `posts/rb-059-mri-repeat.html` — MRI 반복 촬영과 운영 부담
 - `posts/rb-037-inpatient-mri-safety.html` — 입원환자 MRI 위험도 기반 안전관리
 - `posts/rb-064-rsna-ai-certificate.html` — 영상의학 AI 교육과 임상 활용 역량
+- `sitemap.xml` — 검색엔진 사이트맵
+- `robots.txt` — 크롤링 정책
+- `feed.xml` — RSS 2.0 피드
 - `404.html` — 오류 페이지
 - `.nojekyll` — Jekyll 처리 비활성화
 
@@ -33,6 +36,18 @@
 7. 연구·근거
 
 한 글은 여러 주제에 동시에 포함될 수 있습니다.
+
+## Discovery & sharing baseline
+- Canonical URL
+- Open Graph title/description/url/type
+- Twitter summary metadata
+- Schema.org JSON-LD
+- sitemap.xml
+- robots.txt
+- RSS feed auto-discovery
+- Applied on 2026-10-04
+
+Branded social preview image (OG image)는 시각 아이덴티티 자산을 확정한 뒤 별도 추가합니다.
 
 ## Editorial workflow
 Master Index → Deep Dive → Content Review → Public-ready → Published → Society-shared
