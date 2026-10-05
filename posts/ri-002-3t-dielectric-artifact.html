@@ -30,7 +30,7 @@
 <meta name="twitter:description" content="3T MRI의 신호저하를 B1+ 불균일과 유전효과 관점에서 해설합니다.">
 <meta name="twitter:image" content="https://chunghwan-kang.github.io/radiology-intelligence/assets/og-default.jpg">
 <meta name="twitter:image:alt" content="Radiology Intelligence — 영상의학 연구와 실무 해설">
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"3T MRI에서 신호가 갑자기 어두워진다면 — 유전효과 인공물을 의심해야 할 때","description":"3T MRI에서 반복되는 signal shading을 B1+ 불균일성과 dielectric effect 관점에서 감별하고 실무 대응을 해설합니다.","datePublished":"2026-10-05","dateModified":"2026-10-05","mainEntityOfPage":{"@type":"WebPage","@id":"https://chunghwan-kang.github.io/radiology-intelligence/posts/ri-002-3t-dielectric-artifact.html"},"inLanguage":"ko-KR","articleSection":"MRI 검사와 기술·연구와 근거","author":{"@type":"Organization","name":"Radiology Intelligence"},"publisher":{"@type":"Organization","name":"Radiology Intelligence","url":"https://chunghwan-kang.github.io/radiology-intelligence/"},"image":"https://chunghwan-kang.github.io/radiology-intelligence/assets/og-default.jpg"}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"3T MRI에서 신호가 갑자기 어두워진다면 — 유전효과 인공물을 의심해야 할 때","description":"3T MRI에서 반복되는 불균일한 신호저하를 B1+ 불균일과 유전효과 관점에서 감별하고 실무 대응을 해설합니다.","datePublished":"2026-10-05","dateModified":"2026-10-05","mainEntityOfPage":{"@type":"WebPage","@id":"https://chunghwan-kang.github.io/radiology-intelligence/posts/ri-002-3t-dielectric-artifact.html"},"inLanguage":"ko-KR","articleSection":"MRI 검사와 기술·연구와 근거","author":{"@type":"Organization","name":"Radiology Intelligence"},"publisher":{"@type":"Organization","name":"Radiology Intelligence","url":"https://chunghwan-kang.github.io/radiology-intelligence/"},"image":"https://chunghwan-kang.github.io/radiology-intelligence/assets/og-default.jpg"}</script>
 <link rel="stylesheet" href="../styles.css">
 </head>
 <body>
@@ -61,31 +61,31 @@
 <h2>어떤 상황에서 의심할 수 있을까</h2>
 <ul>
 <li>3T에서 특정 부위가 넓고 부드러운 형태로 반복적으로 어두워진다.</li>
-<li>뚜렷한 움직임이나 코일 접촉불량으로 설명하기 어려운 신호저하이 보인다.</li>
+<li>뚜렷한 움직임이나 코일 접촉불량으로 설명하기 어려운 신호저하가 보인다.</li>
 <li>시퀀스를 바꿔도 비슷한 공간적 패턴이 반복된다.</li>
 <li>1.5T에서는 같은 현상이 덜하거나 사라진다.</li>
 <li>B1 보정, RF shimming 또는 송신 조정 후 영상이 개선된다.</li>
 <li>복부·골반·척추처럼 체격과 RF 분포의 영향을 크게 받는 부위에서 재현된다.</li>
 </ul>
 <h2>어떻게 줄일 수 있을까</h2>
-<p>해결방법은 장비와 송신 구조에 따라 달라집니다. 일부 시스템에서는 B1 보정, RF shimming, 병렬 송신(parallel transmission)을 이용해 송신 필드를 보다 균일하게 만들 수 있습니다. 위치와 코일 설정을 다시 확인하고, sequence와 플립각을 조정하는 것도 도움이 될 수 있습니다.</p>
-<p>고유전율 패드(high-permittivity dielectric pad)처럼 수동적으로 RF field를 조절하는 방법도 연구와 임상에서 사용돼 왔습니다. 다만 패드의 재료, 두께, 위치가 RF field와 SAR에 영향을 줄 수 있으므로 임의의 재료를 만들어 일상 검사에 사용하는 방식은 적절하지 않습니다.</p>
+<p>해결방법은 장비와 송신 구조에 따라 달라집니다. 일부 시스템에서는 B1 보정, RF shimming, 병렬 송신(parallel transmission)을 이용해 송신 필드를 보다 균일하게 만들 수 있습니다. 위치와 코일 설정을 다시 확인하고, 시퀀스와 플립각을 조정하는 것도 도움이 될 수 있습니다.</p>
+<p>고유전율 패드(high-permittivity dielectric pad)처럼 수동적으로 RF 필드를 조절하는 방법도 연구와 임상에서 사용돼 왔습니다. 다만 패드의 재료, 두께, 위치가 RF 필드와 SAR에 영향을 줄 수 있으므로 임의의 재료를 만들어 일상 검사에 사용하는 방식은 적절하지 않습니다.</p>
 <h2>검사실에서는 이렇게 접근하는 편이 낫다</h2>
 <ul>
 <li>1. 먼저 코일 위치 설정과 수신 요소 이상을 배제합니다.</li>
-<li>2. motion, B0, susceptibility, 지방억제 실패 같은 다른 artifact를 확인합니다.</li>
-<li>3. shading이 여러 시퀀스에서 같은 위치에 반복되는지 봅니다.</li>
-<li>4. 가능하면 B1 보정, RF shimming 또는 제조사별 송신 최적화을 적용합니다.</li>
+<li>2. 움직임, B0, 자화율 인공물, 지방억제 실패 같은 다른 인공물을 확인합니다.</li>
+<li>3. 신호저하가 여러 시퀀스에서 같은 위치에 반복되는지 봅니다.</li>
+<li>4. 가능하면 B1 보정, RF shimming 또는 제조사별 송신 최적화를 적용합니다.</li>
 <li>5. 문제가 지속되면 다른 자장강도(field strength), 다른 시퀀스 또는 B1 맵과 비교합니다.</li>
 <li>6. 재현되는 이상은 MR 물리 전문가나 서비스 지원팀과 함께 하드웨어·보정 문제까지 확인합니다.</li>
 </ul>
 <h2>이 주제가 중요한 이유</h2>
 <p>유전효과 인공물은 단순히 ‘3T의 단점’으로 외우는 것보다, 영상의 어느 신호저하가 물리적 현상에서 비롯되는지 가설을 세우는 훈련에 더 의미가 있습니다. 방사선사가 인공물을 발견했을 때 즉시 재촬영부터 하는 것이 아니라 원인을 구분하고 적절한 해결전략을 선택하는 것이 품질관리와 검사시간 측면에서도 중요합니다.</p>
 <h2>연구를 해석할 때 주의할 점</h2>
-<p>유전효과와 B1+ 불균일는 밀접하지만 완전히 같은 개념은 아닙니다. 또한 모든 신호저하가 유전효과 때문에 발생하는 것도 아닙니다. 특히 제조사별 RF 송신 방식과 코일 구조가 다르기 때문에 한 장비에서 효과적이었던 해결방법을 다른 장비에 그대로 일반화해서는 안 됩니다.</p>
+<p>유전효과와 B1+ 불균일은 밀접하지만 완전히 같은 개념은 아닙니다. 또한 모든 신호저하가 유전효과 때문에 발생하는 것도 아닙니다. 특히 제조사별 RF 송신 방식과 코일 구조가 다르기 때문에 한 장비에서 효과적이었던 해결방법을 다른 장비에 그대로 일반화해서는 안 됩니다.</p>
 <div class="takeaway">
 <strong>핵심 정리</strong>
-<p>3T MRI에서 반복되는 넓고 불균일한 신호저하이 보일 때는 코일이나 움직임만 확인하지 말고 B1+ 불균일(B1+ inhomogeneity)과 유전효과(dielectric effect)도 감별에 포함할 필요가 있습니다. 중요한 것은 인공물의 이름을 맞히는 것이 아니라, 재현되는 패턴을 근거로 원인 가설을 세우고 적절한 대응을 선택하는 것입니다.</p>
+<p>3T MRI에서 반복되는 넓고 불균일한 신호저하가 보일 때는 코일이나 움직임만 확인하지 말고 B1+ 불균일과 유전효과도 감별에 포함할 필요가 있습니다. 중요한 것은 인공물의 이름을 맞히는 것이 아니라, 재현되는 패턴을 근거로 원인 가설을 세우고 적절한 대응을 선택하는 것입니다.</p>
 </div>
 <section class="sources">
 <h2>출처</h2>
