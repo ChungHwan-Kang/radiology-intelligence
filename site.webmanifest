@@ -1,0 +1,12 @@
+{
+  "name":"Radiology Intelligence",
+  "short_name":"RI",
+  "start_url":"./",
+  "display":"standalone",
+  "background_color":"#ffffff",
+  "theme_color":"#ffffff",
+  "description":"영상의학 연구와 실무 해설",
+  "icons":[
+    {"src":"assets/ri-mark.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}
+  ]
+}

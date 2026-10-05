@@ -47,7 +47,10 @@
 - RSS feed auto-discovery
 - Applied on 2026-10-04
 
-Category taxonomy finalized on 2026-10-05. Branded social preview image (OG image) and RI icon are the next site-asset step.
+Category taxonomy finalized on 2026-10-05.
+- RI SVG favicon/app mark added
+- 1200×630 branded OG source artwork added as `assets/og-source.svg`
+- Raster PNG/JPEG export should be used for `og:image` before social-preview rollout because major social scrapers do not consistently support SVG OG images.
 
 ## Editorial workflow
 Master Index → Deep Dive → Content Review → Public-ready → Published → Society-shared
