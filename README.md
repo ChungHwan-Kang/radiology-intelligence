@@ -51,8 +51,9 @@
 
 Category taxonomy finalized on 2026-10-05.
 - RI SVG favicon/app mark added
-- 1200×630 branded OG source artwork added as `assets/og-source.svg`
-- Raster PNG/JPEG export should be used for `og:image` before social-preview rollout because major social scrapers do not consistently support SVG OG images.
+- 1200×630 branded OG source artwork retained as `assets/og-source.svg`
+- 1200×630 raster JPEG deployed as `assets/og-default.jpg`
+- `og:image`, Twitter large-image metadata, dimensions/alt text, and JSON-LD image references applied site-wide on 2026-10-05.
 
 ## Editorial workflow
 Master Index → Deep Dive → Content Review → Public-ready → Published → Society-shared
