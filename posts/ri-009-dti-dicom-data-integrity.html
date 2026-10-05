@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DTI는 정상처럼 보여도 tractography는 틀릴 수 있다 · Radiology Intelligence</title>
+<meta name="description" content="DTI의 Enhanced MR DICOM 내보내기 오류 사례를 바탕으로 확산 방향 메타데이터, 후처리 소프트웨어, 소프트웨어 업데이트 검증까지 포함한 MRI 데이터 무결성 QA를 해설합니다.">
+<link rel="canonical" href="https://chunghwan-kang.github.io/radiology-intelligence/posts/ri-009-dti-dicom-data-integrity.html">
+<link rel="alternate" type="application/rss+xml" title="Radiology Intelligence RSS" href="https://chunghwan-kang.github.io/radiology-intelligence/feed.xml">
+<meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1"><meta name="theme-color" content="#ffffff">
+<link rel="icon" href="../assets/ri-mark.svg" type="image/svg+xml"><link rel="manifest" href="../site.webmanifest">
+<meta property="og:locale" content="ko_KR"><meta property="og:type" content="article"><meta property="og:site_name" content="Radiology Intelligence">
+<meta property="og:title" content="DTI는 정상처럼 보여도 tractography는 틀릴 수 있다"><meta property="og:description" content="MRI 데이터 품질은 스캔으로 끝나지 않습니다. DTI의 내보내기 형식과 확산 방향 메타데이터, 후처리까지 함께 봅니다."><meta property="og:url" content="https://chunghwan-kang.github.io/radiology-intelligence/posts/ri-009-dti-dicom-data-integrity.html">
+<meta property="og:image" content="https://chunghwan-kang.github.io/radiology-intelligence/assets/og-default.jpg"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:image:type" content="image/jpeg"><meta property="og:image:alt" content="Radiology Intelligence — 영상의학 연구와 실무 해설">
+<meta property="article:published_time" content="2026-10-05T21:54:00+09:00"><meta property="article:modified_time" content="2026-10-05T21:54:00+09:00"><meta property="article:section" content="MRI 검사와 기술·품질과 운영·연구와 근거·AI와 디지털">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="DTI는 정상처럼 보여도 tractography는 틀릴 수 있다"><meta name="twitter:description" content="DTI의 Enhanced MR DICOM 내보내기 오류 사례를 바탕으로 확산 방향 메타데이터, 후처리 소프트웨어, 소프트웨어 업데이트 검증까지 포함한 MRI 데이터 무결성 QA를 해설합니다."><meta name="twitter:image" content="https://chunghwan-kang.github.io/radiology-intelligence/assets/og-default.jpg"><meta name="twitter:image:alt" content="Radiology Intelligence — 영상의학 연구와 실무 해설">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"DTI는 정상처럼 보여도 tractography는 틀릴 수 있다","description":"DTI의 Enhanced MR DICOM 내보내기 오류 사례를 바탕으로 확산 방향 메타데이터, 후처리 소프트웨어, 소프트웨어 업데이트 검증까지 포함한 MRI 데이터 무결성 QA를 해설합니다.","datePublished":"2026-10-05T21:54:00+09:00","dateModified":"2026-10-05T21:54:00+09:00","mainEntityOfPage":{"@type":"WebPage","@id":"https://chunghwan-kang.github.io/radiology-intelligence/posts/ri-009-dti-dicom-data-integrity.html"},"inLanguage":"ko-KR","articleSection":"MRI 검사와 기술·품질과 운영·연구와 근거·AI와 디지털","author":{"@type":"Organization","name":"Radiology Intelligence"},"publisher":{"@type":"Organization","name":"Radiology Intelligence","url":"https://chunghwan-kang.github.io/radiology-intelligence/"},"image":"https://chunghwan-kang.github.io/radiology-intelligence/assets/og-default.jpg"}</script>
+<link rel="stylesheet" href="../styles.css"></head>
+<body>
+<header class="site-header"><div class="wrap header-inner"><a class="brand" href="../index.html">Radiology Intelligence</a><nav class="nav" aria-label="주요 메뉴"><a href="../index.html#latest">최신 해설</a><a href="../categories.html">주제별 보기</a><a href="../about.html">소개</a></nav></div></header>
+<main><article class="article-wrap">
+<div class="article-category">MRI 검사와 기술 · 품질과 운영 · 연구와 근거 · AI와 디지털</div>
+<h1>DTI는 정상처럼 보여도 tractography는 틀릴 수 있다</h1>
+<p class="article-subtitle">MRI 데이터 내보내기에서 확인해야 할 메타데이터 QA</p>
+<div class="article-meta">2026년 10월 5일 · Radiology Intelligence</div>
+
+<div class="article-summary"><strong>먼저 읽는 요약</strong><p>MRI 데이터 품질은 스캔이 끝나는 순간 끝나지 않습니다. 2026년 9월 FDA는 일부 Philips MRI 시스템에서 DTI를 Enhanced MR DICOM으로 내보낼 때 확산 방향 정보가 잘못 포함될 수 있다고 알렸습니다. 이 데이터가 외부 후처리 소프트웨어의 tractography(신경섬유 추적지도)에 사용되면 재구성이 올바르게 처리되지 않을 수 있습니다. 핵심은 특정 제조사 문제가 아니라, DTI처럼 메타데이터에 의존하는 영상에서는 내보내기 형식과 방향정보, 후처리 소프트웨어까지 함께 검증해야 한다는 점입니다.</p></div>
+
+<h2>영상이 보인다고 데이터가 맞는 것은 아니다</h2>
+<p>DTI 원영상이 PACS나 워크스테이션에서 정상적으로 열리고 해부학적으로 자연스럽게 보이더라도, 분석에 필요한 메타데이터가 잘못 연결되면 이후 결과는 달라질 수 있습니다.</p>
+<p>DTI는 각 영상 프레임의 b-value와 확산경사자장 방향(diffusion gradient orientation)을 이용해 텐서를 계산합니다. DICOM 표준에서도 이 정보는 별도 속성으로 관리됩니다. 따라서 단순히 영상 파일이 도착했는지만 확인해서는 충분하지 않습니다.</p>
+
+<h2>이번 FDA 리콜은 무엇을 말하나</h2>
+<p>FDA 리콜 Event 99834는 일부 Philips MRI 시스템의 R11, R12, R13 소프트웨어에서 DTI를 Enhanced MR DICOM 형식으로 내보낼 때 확산 방향 데이터가 잘못 포함될 수 있다고 설명합니다.</p>
+<p>FDA는 해당 구성에서 외부 후처리 소프트웨어의 tractography가 DTI 데이터를 올바르게 처리하지 못할 수 있다고 했고, 수정 소프트웨어가 제공되기 전까지 DTI 내보내기에는 Classic DICOM 전송 방식을 사용하도록 안내했습니다.</p>
+<p>중요한 점은 이것이 모든 DTI 영상획득 자체가 잘못됐다는 의미는 아니라는 것입니다. 문제의 범위는 Enhanced MR DICOM 내보내기 과정의 확산 방향 데이터에 특정됩니다.</p>
+
+<h2>Enhanced MR DICOM이 문제라는 뜻은 아니다</h2>
+<p>Enhanced MR DICOM은 프레임별 획득 정보를 구조화해 저장할 수 있는 표준입니다. 이번 사안은 Enhanced MR DICOM이라는 형식 자체가 위험하다는 뜻이 아니라, 특정 구현에서 잘못된 메타데이터가 포함될 수 있다는 사례입니다.</p>
+<p>따라서 결론은 ‘Classic DICOM이 더 안전하다’가 아니라, 내보내기 형식이 바뀌거나 소프트웨어가 업데이트될 때 실제 후속 처리 결과까지 확인해야 한다는 것입니다.</p>
+
+<h2>MRI실에서 무엇을 확인해야 할까</h2>
+<p>일반적인 임상검사에서는 PACS 전송 여부와 영상 품질 확인이 기본입니다. 하지만 DTI, perfusion, fMRI, quantitative MRI처럼 메타데이터 의존 후처리가 있는 검사에서는 한 단계가 더 필요합니다.</p>
+<ul>
+<li>어떤 DICOM 내보내기 방식을 사용하는가</li>
+<li>b-value와 확산 방향정보가 제대로 보존되는가</li>
+<li>외부 후처리 소프트웨어가 Classic/Enhanced MR DICOM을 어떻게 해석하는가</li>
+<li>스캐너 소프트웨어 업데이트 후 동일 데이터의 결과가 유지되는가</li>
+<li>워크스테이션에서 만든 결과와 외부 후처리 결과가 일관적인가</li>
+<li>연구용 파이프라인이 스캐너/소프트웨어/내보내기 버전을 기록하는가</li>
+</ul>
+
+<h2>소프트웨어 업데이트 후에는 내보내기까지 검증해야 한다</h2>
+<p>MRI 소프트웨어 업데이트 후에는 시퀀스 UI, 영상 재구성, 프로토콜 이전만 확인하기 쉽습니다. 그러나 연구나 후처리 운영 절차가 있다면 내보내기 단계까지 변경관리(change control)에 포함해야 합니다.</p>
+<ul>
+<li>대표 DTI 테스트 데이터셋 준비</li>
+<li>장비 자체 후처리 결과 확인</li>
+<li>실제 사용 내보내기 형식으로 전송</li>
+<li>외부 후처리 소프트웨어에서 경사자장 방향표와 b-value 해석 확인</li>
+<li>텐서 지도나 tractography 결과의 재현성 확인</li>
+<li>스캐너 소프트웨어, 내보내기 방식, 후처리 도구 버전 기록</li>
+</ul>
+<p>이 과정은 특정 제조사 장비에만 필요한 절차가 아니라, 메타데이터에 의존하는 MRI 전반에 적용할 수 있는 품질관리 원칙입니다.</p>
+
+<h2>연구와 AI에서는 왜 더 중요할까</h2>
+<p>다기관 연구나 과거 자료를 이용한 연구에서는 스캐너 소프트웨어 업데이트나 내보내기 형식 변경이 보이지 않는 배치 효과가 될 수 있습니다. DICOM을 NIfTI로 변환하는 과정에서도 방향정보와 경사자장 방향정보가 어떻게 처리됐는지 기록해야 합니다.</p>
+<p>AI와 radiomics도 마찬가지입니다. 모델 검증만 잘했다고 끝나는 것이 아니라, DICOM 입력, 방향정보, 공간정보, 획득 파라미터와 메타데이터 보존이 안정적으로 유지되는지 함께 확인해야 합니다.</p>
+
+<div class="takeaway"><strong>핵심 정리</strong><p>MRI 데이터 품질은 영상획득에서 끝나지 않습니다. DTI처럼 메타데이터 의존 영상에서는 영상이 전송됐는지뿐 아니라, 내보내기 형식과 방향정보가 정확히 보존됐는지, 외부 후처리 소프트웨어가 이를 올바르게 읽는지까지 검증해야 합니다. 소프트웨어 업데이트나 형식 전환은 단순한 IT 변경이 아니라 영상의학 데이터 품질변경으로 봐야 합니다.</p></div>
+
+<section class="sources"><h2>출처</h2><ol>
+<li><a href="https://www.accessdata.fda.gov/scripts/cdrh/cfdocs/cfRes/res.cfm?id=222700" rel="noopener">U.S. Food and Drug Administration. Class 2 Device Recall, Recall Event ID 99834. Philips MRI systems. Posted 2026-09-25.</a></li>
+<li><a href="https://dicom.nema.org/medical/dicom/2025d/output/chtml/part03/sect_C.8.13.5.9.html" rel="noopener">DICOM Standard PS3.3. C.8.13.5.9 MR Diffusion Macro.</a></li>
+<li>DICOM Standard PS3.6. Diffusion Gradient Orientation (0018,9089).</li>
+<li><a href="https://jksronline.org/DOIx.php?id=10.3348%2Fjksr.2020.81.1.81" rel="noopener">대한영상의학회. 자기공명영상 신경조영술: 경험이 적은 영상의학과 의사가 이해해야 할 몇 가지 쟁점들. J Korean Soc Radiol. 2020;81(1):81-91.</a></li>
+</ol>
+<div class="note">※ 본 글은 MRI 데이터 무결성과 품질관리 원리를 설명하는 교육용 해설입니다. 실제 영향 여부와 조치 필요성은 해당 장비의 제조사 시정조치 안내문, 소프트웨어 버전, 내보내기 설정과 기관의 후처리 운영 절차를 기준으로 확인해야 합니다.</div></section>
+
+</article></main></body></html>
