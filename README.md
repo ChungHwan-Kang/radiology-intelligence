@@ -27,13 +27,13 @@
 - `.nojekyll` — Jekyll 처리 비활성화
 
 ## Categories
-1. MRI·영상기술
-2. AI·디지털 영상의학
-3. 환자안전·품질
-4. 인력·운영
-5. 교육·자격
-6. 정책·전문직
-7. 연구·근거
+1. MRI 검사와 기술
+2. MRI 안전
+3. 품질과 운영
+4. AI와 디지털
+5. 교육과 역량
+6. 연구와 근거
+7. 정책과 전문직
 
 한 글은 여러 주제에 동시에 포함될 수 있습니다.
 
@@ -47,7 +47,7 @@
 - RSS feed auto-discovery
 - Applied on 2026-10-04
 
-Branded social preview image (OG image)는 시각 아이덴티티 자산을 확정한 뒤 별도 추가합니다.
+Category taxonomy finalized on 2026-10-05. Branded social preview image (OG image) and RI icon are the next site-asset step.
 
 ## Editorial workflow
 Master Index → Deep Dive → Content Review → Public-ready → Published → Society-shared
