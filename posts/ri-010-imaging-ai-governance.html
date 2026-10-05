@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>영상 AI, 구매보다 어려운 것은 ‘계속 잘 작동하는지’ 확인하는 일이다 · Radiology Intelligence</title>
+<meta name="description" content="2026 ACR–SIIM Imaging AI Practice Parameter를 바탕으로 AI 거버넌스, 기관 내 수용성 평가, 버전관리, 실제 성능 모니터링과 중단 기준을 해설합니다.">
+<link rel="canonical" href="https://chunghwan-kang.github.io/radiology-intelligence/posts/ri-010-imaging-ai-governance.html">
+<link rel="alternate" type="application/rss+xml" title="Radiology Intelligence RSS" href="https://chunghwan-kang.github.io/radiology-intelligence/feed.xml">
+<meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1"><meta name="theme-color" content="#ffffff">
+<link rel="icon" href="../assets/ri-mark.svg" type="image/svg+xml"><link rel="manifest" href="../site.webmanifest">
+<meta property="og:locale" content="ko_KR"><meta property="og:type" content="article"><meta property="og:site_name" content="Radiology Intelligence">
+<meta property="og:title" content="영상 AI, 구매보다 어려운 것은 ‘계속 잘 작동하는지’ 확인하는 일이다"><meta property="og:description" content="영상 AI는 구매보다 운영이 더 어렵습니다. local acceptance testing, monitoring, stop rule과 technologist 역할까지 함께 봅니다."><meta property="og:url" content="https://chunghwan-kang.github.io/radiology-intelligence/posts/ri-010-imaging-ai-governance.html">
+<meta property="og:image" content="https://chunghwan-kang.github.io/radiology-intelligence/assets/og-default.jpg"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:image:type" content="image/jpeg"><meta property="og:image:alt" content="Radiology Intelligence — 영상의학 연구와 실무 해설">
+<meta property="article:published_time" content="2026-10-06T07:10:00+09:00"><meta property="article:modified_time" content="2026-10-06T07:10:00+09:00"><meta property="article:section" content="AI와 디지털·품질과 운영·교육과 역량·정책과 전문직">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="영상 AI, 구매보다 어려운 것은 ‘계속 잘 작동하는지’ 확인하는 일이다"><meta name="twitter:description" content="2026 ACR–SIIM Imaging AI Practice Parameter를 바탕으로 AI 거버넌스, 기관 내 수용성 평가, 버전관리, 실제 성능 모니터링과 중단 기준을 해설합니다."><meta name="twitter:image" content="https://chunghwan-kang.github.io/radiology-intelligence/assets/og-default.jpg"><meta name="twitter:image:alt" content="Radiology Intelligence — 영상의학 연구와 실무 해설">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"영상 AI, 구매보다 어려운 것은 ‘계속 잘 작동하는지’ 확인하는 일이다","description":"2026 ACR–SIIM Imaging AI Practice Parameter를 바탕으로 AI 거버넌스, 기관 내 수용성 평가, 버전관리, 실제 성능 모니터링과 중단 기준을 해설합니다.","datePublished":"2026-10-06T07:10:00+09:00","dateModified":"2026-10-06T07:10:00+09:00","mainEntityOfPage":{"@type":"WebPage","@id":"https://chunghwan-kang.github.io/radiology-intelligence/posts/ri-010-imaging-ai-governance.html"},"inLanguage":"ko-KR","articleSection":"AI와 디지털·품질과 운영·교육과 역량·정책과 전문직","author":{"@type":"Organization","name":"Radiology Intelligence"},"publisher":{"@type":"Organization","name":"Radiology Intelligence","url":"https://chunghwan-kang.github.io/radiology-intelligence/"},"image":"https://chunghwan-kang.github.io/radiology-intelligence/assets/og-default.jpg"}</script>
+<link rel="stylesheet" href="../styles.css"></head>
+<body>
+<header class="site-header"><div class="wrap header-inner"><a class="brand" href="../index.html">Radiology Intelligence</a><nav class="nav" aria-label="주요 메뉴"><a href="../index.html#latest">최신 해설</a><a href="../categories.html">주제별 보기</a><a href="../about.html">소개</a></nav></div></header>
+<main><article class="article-wrap">
+<div class="article-category">AI와 디지털 · 품질과 운영 · 교육과 역량 · 정책과 전문직</div>
+<h1>영상 AI, 구매보다 어려운 것은 ‘계속 잘 작동하는지’ 확인하는 일이다</h1>
+<p class="article-subtitle">2026 ACR–SIIM Practice Parameter가 제시한 영상 AI 운영의 기준</p>
+<div class="article-meta">2026년 10월 6일 · Radiology Intelligence</div>
+
+<div class="article-summary"><strong>먼저 읽는 요약</strong><p>영상 AI를 도입할 때 흔히 가장 먼저 보는 것은 정확도와 가격입니다. 하지만 2026년 ACR–SIIM Practice Parameter for Imaging Artificial Intelligence는 그 다음을 더 중요하게 봅니다. 어떤 도구를 왜 선택했는지, 우리 기관에서 실제로 잘 작동하는지, 버전이 바뀌었을 때 무엇을 다시 확인할지, 성능이 떨어질 때 언제 사용을 멈출지까지 하나의 운영체계로 관리해야 한다는 것입니다.</p></div>
+
+<h2>AI는 ‘설치’가 아니라 생애주기 관리의 대상이다</h2>
+<p>영상 AI는 한 번 검증하고 끝나는 고정된 장비가 아닙니다. 제품과 알고리즘은 업데이트되고, 입력 영상의 장비·프로토콜·재구성 방식도 바뀝니다. 환자군과 유병률, PACS·RIS 연동, 네트워크와 운영 절차도 달라질 수 있습니다.</p>
+<p>ACR–SIIM Practice Parameter는 영상 AI를 선정, 배포, 모니터링, 지속적 품질개선까지 이어지는 생애주기로 다룹니다. 즉 AI 도입의 끝은 구매가 아니라 운영입니다.</p>
+
+<h2>AI 거버넌스가 먼저다</h2>
+<p>ACR은 임상, 기술, 규정준수 관점을 함께 포함한 AI 거버넌스(AI governance)를 권고합니다.</p>
+<ul>
+<li>어떤 환자와 검사에 사용할 것인가</li>
+<li>AI 결과를 누가, 어떤 시점에 보는가</li>
+<li>오류가 발생하면 누가 확인하는가</li>
+<li>개인정보와 보안은 어떻게 관리하는가</li>
+<li>성능 저하를 어떻게 발견할 것인가</li>
+<li>업데이트나 교체를 누가 승인할 것인가</li>
+</ul>
+<p>이 질문에 답할 수 있어야 AI가 실제 영상의학 운영 절차 안에 들어올 수 있습니다.</p>
+
+<h2>AI 도구 목록과 버전관리가 필요한 이유</h2>
+<p>같은 제품이라도 버전이 바뀌면 동작이 달라질 수 있습니다. 따라서 ACR은 사용 중인 AI 도구와 버전, 의도된 사용목적(intended use)을 추적하는 목록을 강조합니다.</p>
+<ul>
+<li>제품과 알고리즘 이름</li><li>제조사 또는 개발사</li><li>버전</li><li>의도된 사용목적</li>
+<li>적용 영상기법과 검사영역</li><li>입력되는 series 또는 프로토콜</li>
+<li>도입일과 업데이트 이력</li><li>기관 내 평가 결과</li><li>모니터링 지표</li><li>책임자와 제조사 연락처</li>
+</ul>
+
+<h2>FDA 허가가 있어도 우리 기관에서 바로 잘 작동한다는 뜻은 아니다</h2>
+<p>규제기관의 허가는 중요한 안전장벽입니다. 하지만 허가받은 AI가 모든 병원에서 동일한 성능을 보인다는 뜻은 아닙니다.</p>
+<p>환자군, 스캐너, 프로토콜, 질환 유병률, 운영 절차와 데이터 흐름이 달라지면 결과가 달라질 수 있습니다. 그래서 Practice Parameter는 임상 사용 전에 기관 내 수용성 평가(local acceptance testing)를 수행하도록 권고합니다.</p>
+<p>MRI에서는 스캐너 제조사·모델, 자장강도, 소프트웨어 버전, 시퀀스와 프로토콜, 재구성 방식, DICOM 전송, 전처리와 실제 환자군의 차이를 확인할 필요가 있습니다.</p>
+
+<h2>배포 후에도 계속 모니터링해야 한다</h2>
+<p>AI를 실제 임상에 배포한 뒤에는 성능이 시간이 지나도 유지되는지 확인해야 합니다. ACR은 실제 임상 성능을 지속적으로 모니터링하고 성능 드리프트(performance drift)와 안전문제를 검토하도록 제시합니다.</p>
+<ul>
+<li>sensitivity와 specificity</li><li>false positive / false negative</li><li>처리 실패율</li>
+<li>처리시간과 지연시간</li><li>사용률</li><li>사용자 수정·무시 비율</li>
+<li>하위집단 성능</li><li>스캐너 또는 프로토콜별 성능</li><li>운영 중단 또는 흐름 방해</li>
+</ul>
+
+<h2>‘언제 멈출 것인가’도 미리 정해야 한다</h2>
+<p>ACR은 중단 기준(stop rule)을 사전에 정의하는 방향을 제시합니다. 반복적인 처리 실패, 예상하지 못한 하위집단 성능 저하, 특정 스캐너·프로토콜에서의 이상, 안전 관련 사건이 발생했을 때 검토 또는 일시중지가 필요할 수 있습니다.</p>
+<p>중단 기준은 모든 AI에 동일한 숫자를 적용하는 것이 아니라 사용목적과 임상위험에 따라 정해야 합니다.</p>
+
+<h2>방사선사는 어디까지 관여해야 할까</h2>
+<p>이번 Practice Parameter의 중요한 점 중 하나는 방사선사를 공식 적용 대상에 포함했다는 것입니다.</p>
+<p>MRI 방사선사는 AI의 임상 유효성을 독자적으로 승인하는 역할은 아니지만, 실제 영상획득과 운영 절차에 가장 가까운 실무자로서 중요한 정보를 제공합니다.</p>
+<ul>
+<li>AI가 의도한 검사와 프로토콜에 적용되는지 확인</li>
+<li>입력 series와 영상획득 조건의 일관성 유지</li>
+<li>스캐너·소프트웨어·프로토콜 변경사항 공유</li>
+<li>처리 실패와 예상하지 못한 출력 보고</li>
+<li>운영 절차 문제에 대한 현장 의견</li>
+<li>기관 내 수용성 평가에 필요한 대표 사례와 운영 절차 정보 제공</li>
+<li>AI 업데이트가 현장에 제대로 전달됐는지 확인</li>
+</ul>
+
+<h2>개인정보보호와 보안도 AI 성능만큼 중요하다</h2>
+<p>영상 AI는 외부 클라우드, 제조사 서버, 데이터 전송경로와 연결되는 경우가 많습니다. 따라서 AI를 도입할 때는 무엇이 어디로 전송되고 누가 접근하는지 확인해야 합니다.</p>
+<p>확인 항목에는 PHI 포함 여부, 접근통제, 접속기록, 데이터 보관기간, 제조사 접근권한, 업데이트 방식, 사이버보안 사고 대응 등이 포함될 수 있습니다.</p>
+
+<h2>국내에서는 어떻게 받아들여야 할까</h2>
+<p>ACR–SIIM Practice Parameter는 미국 전문학회의 자발적 Practice Parameter입니다. 국내 법적 의무나 국내 전문학회의 공식 기준은 아닙니다.</p>
+<p>그러나 AI 도입을 ‘구매’가 아니라 ‘운영체계’로 보는 기준이라는 점은 국내 영상의학과 MRI실에서도 참고할 가치가 큽니다. 실제 적용 시에는 국내 의료기기 허가, 개인정보보호, 병원 규정과 직무범위를 별도로 검토해야 합니다.</p>
+
+<div class="takeaway"><strong>핵심 정리</strong><p>좋은 영상 AI 도입은 가장 정확한 제품을 사는 것만으로 완성되지 않습니다. AI 거버넌스, 기관 내 수용성 평가, 버전관리, 실제 성능 모니터링, 성능 드리프트와 안전문제 감시, 중단 기준, 개인정보보호·보안과 지속적 품질개선이 하나의 생애주기로 연결돼야 합니다.</p></div>
+
+<section class="sources"><h2>출처</h2><ol>
+<li><a href="https://gravitas.acr.org/PPTS/GetDocumentView?docId=217" rel="noopener">American College of Radiology. ACR–SIIM Practice Parameter for Imaging Artificial Intelligence (AI). Resolution 13. Approved 2026-05-05; effective 2026-10-01.</a></li>
+<li><a href="https://www.acr.org/News-and-Publications/Media-Center/2026/first-practice-parameter-for-imaging-ai" rel="noopener">American College of Radiology. American College of Radiology Approves First Ever Practice Parameter for Imaging Artificial Intelligence. 2026-05-05.</a></li>
+<li><a href="https://siim.org/artificial-intelligence/siim-and-acr-launch-ai-practice-parameter/" rel="noopener">Society for Imaging Informatics in Medicine. Standardizing the Future: SIIM and ACR Launch Groundbreaking AI Practice Parameter. 2026-05-13.</a></li>
+<li>Coombs LP, et al. ACR’s Assess-AI: A Registry for Real-World Performance Monitoring of Clinical Imaging Artificial Intelligence. <em>J Am Coll Radiol.</em> 2026. DOI: 10.1016/j.jacr.2026.04.024.</li>
+</ol>
+<div class="note">※ 본 글은 영상 AI의 도입·운영 원리를 설명하는 교육용 해설입니다. 실제 AI 사용 여부와 운영기준은 해당 제품의 허가사항, 기관의 AI 거버넌스·정보보안·개인정보보호 정책, 관련 법령과 임상 책임체계를 기준으로 판단해야 합니다.</div></section>
+</article></main></body></html>
