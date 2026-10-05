@@ -17,6 +17,7 @@
 - `categories.html` — 7개 주제별 보기
 - `about.html` — 소개·편집 원칙
 - `styles.css` — 공통 스타일
+- `posts/ri-002-3t-dielectric-artifact.html` — 3T dielectric artifact와 B1+ 불균일성
 - `posts/ri-001-mri-thermal-injury.html` — MRI 열손상의 공통 원인과 예방
 - `posts/rb-059-mri-repeat.html` — MRI 반복 촬영과 운영 부담
 - `posts/rb-037-inpatient-mri-safety.html` — 입원환자 MRI 위험도 기반 안전관리
@@ -58,4 +59,4 @@ Master Index → Deep Dive → Content Review → Public-ready → Published →
 
 Public-ready 검토가 끝난 콘텐츠만 공개 사이트에 게시합니다.
 
-RI-001 published on 2026-10-05. RI-002 (3T dielectric artifact) remains Public-ready.
+RI-001 and RI-002 published on 2026-10-05.
