@@ -503,3 +503,73 @@ a:hover{color:var(--blue)}
   font-size:.92rem;
   line-height:1.65;
 }
+
+
+.ric-panel{
+  margin:2rem 0;
+  padding:1.25rem;
+  border:1px solid #dbe6ee;
+  border-radius:16px;
+  background:#fbfdff;
+}
+.ric-panel h3{
+  margin:0;
+  color:#17324d;
+}
+.ric-kicker{
+  margin:.35rem 0 1rem;
+  color:#667788;
+  font-size:.95rem;
+}
+.ric-grid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:1rem;
+}
+.ric-card{
+  padding:1rem;
+  border:2px solid;
+  border-radius:14px;
+  background:#fff;
+}
+.ric-card>strong{
+  display:block;
+  margin-bottom:.65rem;
+  font-size:1rem;
+}
+.ric-card>strong span{
+  display:block;
+  margin-top:.2rem;
+  color:#17324d;
+  font-size:1.05rem;
+}
+.ric-card ul{
+  margin:.25rem 0 0;
+  padding-left:1.2rem;
+}
+.ric-card li{
+  margin:.45rem 0;
+}
+.ric-remove{border-color:#d24b43}
+.ric-remove>strong{color:#d24b43}
+.ric-insulate{border-color:#2f6da4}
+.ric-insulate>strong{color:#2f6da4}
+.ric-communicate{border-color:#3d8a67}
+.ric-communicate>strong{color:#3d8a67}
+.ric-note{
+  margin:1rem 0 0;
+  color:#5f6f7d;
+  font-size:.9rem;
+  line-height:1.65;
+}
+@media (max-width:760px){
+  .ric-panel{
+    padding:1rem;
+  }
+  .ric-grid{
+    grid-template-columns:1fr;
+  }
+  .ric-card{
+    padding:.9rem;
+  }
+}
