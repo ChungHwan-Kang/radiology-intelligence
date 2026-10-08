@@ -485,3 +485,21 @@ a:hover{color:var(--blue)}
   .article-wrap h2{font-size:23px;margin-top:42px}
   .category-intro h1{font-size:30px}
 }
+
+.article-figure{
+  margin:2rem 0;
+}
+.article-figure img{
+  display:block;
+  width:100%;
+  height:auto;
+  border:1px solid #dbe4ec;
+  border-radius:14px;
+  background:#fff;
+}
+.article-figure figcaption{
+  margin-top:.7rem;
+  color:#5f6f7f;
+  font-size:.92rem;
+  line-height:1.65;
+}
