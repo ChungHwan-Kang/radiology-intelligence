@@ -5,8 +5,9 @@
   <link>https://chunghwan-kang.github.io/radiology-intelligence/</link>
   <description>영상의학의 연구, AI, 환자안전, 운영, 교육, 정책 변화를 근거 중심으로 해설합니다.</description>
   <language>ko-KR</language>
-  <lastBuildDate>Thu, 15 Oct 2026 00:04:00 GMT</lastBuildDate>
+  <lastBuildDate>Fri, 16 Oct 2026 10:37:00 GMT</lastBuildDate>
   <atom:link href="https://chunghwan-kang.github.io/radiology-intelligence/feed.xml" rel="self" type="application/rss+xml"/>
+  <item><title>MRI 정량값은 같은데 색이 다르다면, 판독도 달라질까?</title><link>https://chunghwan-kang.github.io/radiology-intelligence/posts/ri-023-quantitative-mri-colour-maps.html</link><guid isPermaLink="true">https://chunghwan-kang.github.io/radiology-intelligence/posts/ri-023-quantitative-mri-colour-maps.html</guid><pubDate>Fri, 16 Oct 2026 19:37:00 +0900</pubDate><description>정량 MRI 컬러맵과 표시 범위의 해석상 의미를 다룹니다.</description></item>
   <item><title>MRI AI 분할 정확도가 높으면 정량 측정도 믿을 수 있을까?</title><link>https://chunghwan-kang.github.io/radiology-intelligence/posts/ri-022-mri-ai-segmentation-volume-bias.html</link><guid isPermaLink="true">https://chunghwan-kang.github.io/radiology-intelligence/posts/ri-022-mri-ai-segmentation-volume-bias.html</guid><pubDate>Thu, 15 Oct 2026 09:04:00 +0900</pubDate><description>허벅지 MRI 자동 분할 연구에서 Dice 계수와 근육 체적 편향을 구분해 정량 품질관리의 의미를 설명합니다.</description></item>
   <item><title>롱코비드 환자의 피로, ASL 뇌관류 MRI로 설명할 수 있을까?</title><link>https://chunghwan-kang.github.io/radiology-intelligence/posts/ri-021-asl-post-covid-fatigue.html</link><guid isPermaLink="true">https://chunghwan-kang.github.io/radiology-intelligence/posts/ri-021-asl-post-covid-fatigue.html</guid><pubDate>Thu, 15 Oct 2026 07:30:00 +0900</pubDate><description>pCASL 뇌관류와 주관적 피로·주의력 수행의 연관성 및 한계</description></item>
   <item><title>전립선 MRI AI, 22개국에서 검증했는데 왜 병원마다 성능이 달랐을까?</title><link>https://chunghwan-kang.github.io/radiology-intelligence/posts/ri-020-scarlet-1-prostate-mri-ai.html</link><guid isPermaLink="true">https://chunghwan-kang.github.io/radiology-intelligence/posts/ri-020-scarlet-1-prostate-mri-ai.html</guid><pubDate>Wed, 14 Oct 2026 21:20:00 +0900</pubDate><description>SCARLET-1 국제 다기관 외부검증에서 나타난 병원별 AI 성능 차이와 현지 검증의 필요성</description></item>
