@@ -48,7 +48,7 @@ def check(root: Path, slug: str) -> list[str]:
         require(cls in parser.classes, f"missing section: {cls}")
     require("먼저 읽는 요약" in html, "summary heading missing")
     require("핵심 정리" in html, "takeaway heading missing")
-    require(bool(re.search(r"10\\.\\d{4,9}/[^\\s<\\\"]+", html)), "DOI missing")
+    require(bool(re.search(r"10\.\d{4,9}/[^\s<\\"]+", html)), "DOI missing")
     order = [html.find(x) for x in ("article-category", "<h1", "article-subtitle", "article-meta", "article-summary", "takeaway", "sources")]
     require(all(x >= 0 for x in order) and order == sorted(order), "editorial order invalid")
     for href in ("../styles.css", "../feed.xml", "../site.webmanifest"):
@@ -73,7 +73,7 @@ def main() -> int:
     args = ap.parse_args()
     bad = 0
     for slug in args.article:
-        if not re.fullmatch(r"(ri|rb)-[0-9]{3}-[a-z0-9-]+\\.html", slug):
+        if not re.fullmatch(r"(ri|rb)-[0-9]{3}-[a-z0-9-]+\.html", slug):
             print(f"FAIL invalid article basename: {slug}")
             bad += 1
             continue
