@@ -1,0 +1,27 @@
+name: RI publication integrity (read-only)
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'posts/**'
+      - 'index.html'
+      - 'categories.html'
+      - 'feed.xml'
+      - 'sitemap.xml'
+      - 'scripts/verify_publication.py'
+      - '.github/workflows/ri-publication-integrity.yml'
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate latest approved articles
+        run: |
+          python scripts/verify_publication.py \
+            --article ri-029-euroaim-efrs-radiographer-ai-research-survey.html \
+            --article ri-030-li-rads-threshold-growth-10mm-ipd-meta-analysis.html
