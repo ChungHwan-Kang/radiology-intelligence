@@ -86,6 +86,22 @@ class EditorialGateTests(unittest.TestCase):
         self.assertEqual(approved["state"], "APPROVED_FOR_PUBLISH")
         self.assertFalse(approved["public_write_permitted"])
         self.assertEqual(approved["approval_sha256"], status["sha256"])
+    def test_reject_article_id_path_traversal(self):
+        self.data["id"] = "../../escaped"
+        result = self.prepare()
+        self.assertEqual(result.returncode, 3)
+        self.assertIn("INVALID_ARTICLE_ID_PATH", result.stderr)
+        self.assertFalse((self.root / "escaped").exists())
+    def test_reject_private_symlink_escape(self):
+        self.inp.write_text(json.dumps(self.data), encoding="utf-8")
+        self.private.mkdir()
+        elsewhere = self.root / "elsewhere"
+        elsewhere.mkdir()
+        (self.private / "RI-999").symlink_to(elsewhere, target_is_directory=True)
+        result = self.call("prepare", "--input", str(self.inp), "--private-dir", str(self.private))
+        self.assertEqual(result.returncode, 3)
+        self.assertIn("PRIVATE_STAGING_PATH_ESCAPE", result.stderr)
+        self.assertFalse((elsewhere / "status.json").exists())
     def test_reject_git_worktree_storage(self):
         self.inp.write_text(json.dumps(self.data), encoding="utf-8")
         work = self.root / "repo"; work.mkdir(); (work / ".git").mkdir()
