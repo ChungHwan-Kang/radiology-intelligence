@@ -88,7 +88,7 @@ def preview(a):
         '<div class="article-meta">비공개 검토 · 발행일 승인 후 확정</div>'
         '<div class="article-summary"><strong>먼저 읽는 요약</strong><p>' + summary + '</p></div>'
         + detail + '<div class="takeaway"><strong>핵심 정리</strong><p>' + e(a["takeaway"]) + '</p></div>'
-        '<section class="sources"><h2>출처</h2><ol>' + citations + '</ol></section>'
+        + '<section class="sources"><h2>출처</h2><ol>' + citations + '</ol></section>'
         '</article></main></body></html>'
     )
 
