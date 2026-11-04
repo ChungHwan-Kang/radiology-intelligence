@@ -132,9 +132,15 @@ def save_json(path, data):
 def prepare(args):
     article = json.loads(args.input.read_text(encoding="utf-8"))
     if not isinstance(article, dict): raise ValueError("ARTICLE_NOT_OBJECT")
+    article_id = article.get("id")
+    if not isinstance(article_id, str) or not re.fullmatch(r"RI-[0-9]{3}", article_id):
+        raise ValueError("INVALID_ARTICLE_ID_PATH")
     errors = assess(article)
-    output = safe_dir(args.private_dir) / article.get("id", "invalid")
-    output.mkdir(parents=True, exist_ok=True)
+    private_root = safe_dir(args.private_dir)
+    output = (private_root / article_id).resolve()
+    if not output.is_relative_to(private_root):
+        raise ValueError("PRIVATE_STAGING_PATH_ESCAPE")
+    output.mkdir(parents=True, exist_ok=True, mode=0o700)
     page = preview(article) if not errors else ""
     if page: errors.extend(html_issues(page))
     state = "SOURCE_BLOCKED" if any("SOURCE_BLOCKED" in x for x in errors) else ("QA_BLOCKED" if errors else "APPROVAL_PENDING")
@@ -152,7 +158,12 @@ def prepare(args):
     return 2 if errors else 0
 
 def approve(args):
-    target = safe_dir(args.private_dir) / args.article_id
+    if not re.fullmatch(r"RI-[0-9]{3}", args.article_id):
+        raise ValueError("INVALID_ARTICLE_ID_PATH")
+    private_root = safe_dir(args.private_dir)
+    target = (private_root / args.article_id).resolve()
+    if not target.is_relative_to(private_root):
+        raise ValueError("PRIVATE_STAGING_PATH_ESCAPE")
     record = json.loads((target / "status.json").read_text(encoding="utf-8"))
     if args.explicit != "APPROVE_FOR_PUBLICATION":
         raise ValueError("EXPLICIT_APPROVAL_REQUIRED")
