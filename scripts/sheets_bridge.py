@@ -16,8 +16,24 @@ def _table(item,key):
     headers=[str(x).strip() for x in rows[0]]
     if not NEEDED[key].issubset(headers):
         raise ValueError(f'{key}: MISSING_HEADERS: {sorted(NEEDED[key]-set(headers))}')
-    if len(headers)!=len(set(headers)):
-        raise ValueError(f'{key}: DUPLICATE_HEADERS')
+    # Preserve both physical columns when a non-key header appears twice.
+    # Required semantic headers must remain unambiguous for DOI/ID selection.
+    seen=set();renames=[]
+    for i,header in enumerate(headers):
+        if not header:
+            raise ValueError(f'{key}: EMPTY_HEADER_COL_{i+1}')
+        if header in seen:
+            if header in NEEDED[key]:
+                raise ValueError(f'{key}: AMBIGUOUS_REQUIRED_HEADER: {header}')
+            n=i+1;letters=''
+            while n:
+                n,mod=divmod(n-1,26);letters=chr(65+mod)+letters
+            renamed=f'{header} [COL_{letters}]'
+            if renamed in seen or renamed in headers:
+                raise ValueError(f'{key}: HEADER_DISAMBIGUATION_COLLISION: {header}')
+            headers[i]=renamed
+            renames.append({'column':letters,'original':header,'csv_header':renamed})
+        seen.add(headers[i])
     filled=[]
     for original_row,cells in enumerate(rows[1:],start=2):
         if not isinstance(cells,list) or len(cells)>len(headers):
@@ -27,7 +43,7 @@ def _table(item,key):
             record['Watch Row']=str(original_row)
         filled.append(record)
     fields=headers+(['Watch Row'] if key=='MRI_Research_Watch' and 'Watch Row' not in headers else [])
-    return fields,filled
+    return fields,filled,renames
 
 def bridge(data,output_dir):
     if not isinstance(data,dict) or not set(ALLOWED).issubset(data):
@@ -37,16 +53,17 @@ def bridge(data,output_dir):
         if (part/'.git').exists():
             raise ValueError('PRIVATE_OUTPUT_INSIDE_GIT_REPOSITORY')
     out.mkdir(parents=True,exist_ok=True,mode=0o700)
-    counts={};digests={}
+    counts={};digests={};header_disambiguations={}
     for key in ALLOWED:
-        headers,rows=_table(data[key],key)
+        headers,rows,renames=_table(data[key],key)
+        header_disambiguations[key]=renames
         path=out/(key+'.csv');tmp=out/(key+'.csv.tmp')
         with tmp.open('w',encoding='utf-8-sig',newline='') as fh:
             writer=csv.DictWriter(fh,fieldnames=headers)
             writer.writeheader();writer.writerows(rows)
         os.replace(tmp,path)
         counts[key]=len(rows);digests[key]=hashlib.sha256(path.read_bytes()).hexdigest()
-    manifest={'status':'SNAPSHOT_CREATED','source':'EXISTING_CONNECTED_GOOGLE_SHEETS_VALUES','tabs':counts,'sha256':digests,'public_write_permitted':False,'automatic_google_read':False,'source_write_performed':False}
+    manifest={'status':'SNAPSHOT_CREATED','source':'EXISTING_CONNECTED_GOOGLE_SHEETS_VALUES','tabs':counts,'sha256':digests,'header_disambiguations':header_disambiguations,'public_write_permitted':False,'automatic_google_read':False,'source_write_performed':False}
     (out/'snapshot_manifest.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2),encoding='utf-8')
     return manifest
 
