@@ -2,6 +2,7 @@ import unittest,tempfile,sys
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/"scripts"))
 from editorial_pipeline import execute
+from snapshot_integrity import digest
 class PipelineTests(unittest.TestCase):
     def setUp(self):
         self.tmp=tempfile.TemporaryDirectory();self.addCleanup(self.tmp.cleanup)
@@ -25,6 +26,9 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(result["state"],"BLOCKED")
     def test_production_snapshot_complete(self):
         self.values["_snapshot_complete"]=True
+        self.values["_snapshot_envelope"]={"tabs":{
+            name:{"range":rng,"rows":len(self.values[name]),"sha256":digest(self.values[name])}
+            for name,rng in (("Master_Index","A1:Z1000"),("MRI_Research_Watch","A1:S1000"))}}
         result=execute(self.values,self.active,self.states,self.out,self.note,require_complete=True)
         self.assertEqual(result["selected"]["decision"],"RESEARCH_ALTERNATE")
     def test_idempotent(self):
