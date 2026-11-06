@@ -110,6 +110,22 @@ class QueueTests(unittest.TestCase):
         self.assertIsNone(item["article_id"])
         self.assertFalse(worklist["source_verification_performed"])
 
+    def test_in_progress_review_precedes_newer_unreviewed_high_priority(self):
+        doi="10.1186/s13244-026-02459-2"
+        self.watch.append(row("10.1000/newer","New study","HIGH",index=100))
+        self.states[doi]={
+            "status":"SOURCE_REVIEW_IN_PROGRESS",
+            "supplement":"PENDING",
+            "source_url":"https://doi.org/"+doi,
+            "pending_tasks":["Inspect original supplemental Table S1","Verify sensitivity analysis Table S2"]
+        }
+        result=build_source_review_backlog([],self.watch,self.active,self.states,limit=2)
+        self.assertEqual(result["candidate_count"],2)
+        self.assertEqual(result["entries"][0]["doi"],doi)
+        self.assertEqual(result["entries"][0]["required_next_steps"],self.states[doi]["pending_tasks"])
+        self.assertEqual(result["entries"][0]["review_note_source_url"],"https://doi.org/"+doi)
+        self.assertFalse(result["source_verification_performed"])
+
     def test_unreviewed_candidate_has_no_pending_supplement_attestation(self):
         worklist=build_source_review_backlog([],self.watch,self.active,{})
         item=worklist["entries"][0]
