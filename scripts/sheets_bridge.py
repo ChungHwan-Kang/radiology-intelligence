@@ -4,7 +4,7 @@ Caller exports the two existing sheets via its connected Drive connector to JSON
 This script never queries Google on its own or alters its source tabs.
 """
 from __future__ import annotations
-import argparse,csv,hashlib,json,os,sys
+import argparse,csv,hashlib,json,os,re,sys
 from pathlib import Path
 ALLOWED=("Master_Index","MRI_Research_Watch")
 NEEDED={"Master_Index":{"ID","DOI","Content Stage"},"MRI_Research_Watch":{"Title","DOI","RI Article Candidate","Priority","Existing Master ID"}}
@@ -39,6 +39,13 @@ def _table(item,key):
         if not isinstance(cells,list) or len(cells)>len(headers):
             raise ValueError(f'{key}: BAD_ROW_{original_row}')
         record={h:str(cells[i]) if i<len(cells) and cells[i] is not None else '' for i,h in enumerate(headers)}
+        if key=='MRI_Research_Watch':
+            reference=record.get('Existing Master ID','').strip()
+            priority=record.get('Priority','').strip().upper()
+            if reference and not re.fullmatch(r'RI-[0-9]{3}',reference):
+                raise ValueError(f'{key}: INVALID_MASTER_REFERENCE_ROW_{original_row}')
+            if priority and priority not in ('HIGH','MEDIUM','LOW'):
+                raise ValueError(f'{key}: INVALID_PRIORITY_ROW_{original_row}')
         if key=='MRI_Research_Watch' and not record.get('Watch Row'):
             record['Watch Row']=str(original_row)
         filled.append(record)
