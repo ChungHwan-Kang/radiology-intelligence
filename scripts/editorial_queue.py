@@ -84,6 +84,54 @@ def select(master,watch,active,source_states,require_source_evidence=False):
             "no_new_ri_id":True,"public_write_permitted":False,
             "next_action":"PRIVATE_RESEARCH_ONLY_WHILE_ACTIVE_SOURCE_BLOCKED" if active_id else "PRIVATE_DRAFT_WITH_ID_CHECK"}
 
+
+def build_source_review_backlog(master,watch,active,source_states,limit=5):
+    """Find eligible research records needing a primary-source verification.
+
+    No source is marked verified here. In particular, this worklist must never
+    mint article IDs or authorize a publication.
+    """
+    if type(limit) is not int or limit < 1 or limit > 50:
+        raise ValueError("INVALID_REVIEW_BACKLOG_LIMIT")
+    reserved_dois={norm_doi(active.get("doi",""))}
+    reserved_titles=set()
+    for row in master:
+        stage=(row.get("Content Stage") or row.get("Status") or "").strip().lower()
+        if stage in {"published","approved","approval_pending","public-ready","hold","active","draft"}:
+            doi=norm_doi(row.get("DOI",""))
+            if doi: reserved_dois.add(doi)
+            title=(row.get("Title") or "").strip().casefold()
+            if title: reserved_titles.add(title)
+    candidates=[]
+    seen=set()
+    for row in watch:
+        if (row.get("RI Article Candidate") or "").strip().upper()!="YES": continue
+        if (row.get("Existing Master ID") or "").strip(): continue
+        doi=norm_doi(row.get("DOI",""))
+        title=(row.get("Title") or "").strip()
+        if not doi or not title or doi in seen or doi in reserved_dois or title.casefold() in reserved_titles: continue
+        if source_record_eligible(source_states.get(doi),require_evidence=True): continue
+        seen.add(doi)
+        priority=(row.get("Priority") or "").strip().upper()
+        rank={"HIGH":0,"MEDIUM":1,"LOW":2}.get(priority,3)
+        try: watch_row=int(row.get("Watch Row") or 0)
+        except ValueError: watch_row=0
+        candidates.append((rank,-watch_row,doi,{
+            "doi":doi,"title":title,"priority":priority or "UNSPECIFIED",
+            "watch_row":watch_row,"review_state":"SOURCE_REVIEW_REQUIRED",
+            "required_next_steps":[
+                "check_original_methods_results",
+                "crosscheck_numerical_claims_and_table_locations",
+                "review_supplement_and_limitations",
+                "record_reviewed_by_and_date"
+            ],
+            "article_id":None,"public_write_permitted":False
+        }))
+    candidates.sort(key=lambda item:(item[0],item[1],item[2]))
+    return {"status":"PRIVATE_SOURCE_REVIEW_BACKLOG","entries":[x[3] for x in candidates[:limit]],
+            "candidate_count":len(candidates),"article_id_assigned":False,
+            "source_verification_performed":False,"public_write_permitted":False}
+
 def main():
     p=argparse.ArgumentParser()
     for key in ("master","watch","active","sources","output"): p.add_argument("--"+key,required=True,type=Path)
