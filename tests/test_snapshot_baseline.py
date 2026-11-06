@@ -49,6 +49,11 @@ class BaselineTests(unittest.TestCase):
         b["tabs"]["Master_Index"]["provider_range"]="Incorrect!A1:Z1000"
         with self.assertRaisesRegex(ValueError,"INVALID_BASELINE_RANGE"):
             verify_against_baseline(v,b)
+    def test_same_tab_but_shorter_provider_range_blocked(self):
+        v,b=case()
+        b["tabs"]["Master_Index"]["provider_range"]="Master_Index!A1:Z1000"
+        with self.assertRaisesRegex(ValueError,"BASELINE_SNAPSHOT_RANGE_MISMATCH"):
+            verify_against_baseline(v,b)
     def test_boolean_count_blocked(self):
         v,b=case()
         b["tabs"]["Master_Index"]["observed_rows"]=True
