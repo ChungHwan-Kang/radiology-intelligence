@@ -15,7 +15,7 @@ class PublicationTransactionTests(unittest.TestCase):
         self.html=b'<meta name="robots" content="noindex,nofollow">'
         (self.folder/"review.html").write_bytes(self.html)
         self.sha=hashlib.sha256(self.html).hexdigest()
-        self.state={"article_id":"RI-999","state":"APPROVAL_PENDING","sha256":self.sha}
+        self.state={"article_id":"RI-999","state":"APPROVAL_PENDING","sha256":self.sha,"source_sha256":hashlib.sha256((self.folder/"article.json").read_bytes()).hexdigest()}
         self.save()
     def save(self):
         (self.folder/"status.json").write_text(json.dumps(self.state))
@@ -47,7 +47,7 @@ class PublicationTransactionTests(unittest.TestCase):
         self.approved()
         self.article["source_verification"]["original_methods_results"]=False
         (self.folder/"article.json").write_text(json.dumps(self.article))
-        with self.assertRaisesRegex(ValueError,"SOURCE_VERIFICATION_NOT_RECORDED"):
+        with self.assertRaisesRegex(ValueError,"APPROVED_SOURCE_CHANGED"):
             plan_publish(self.root,"RI-999")
     def test_path_traversal(self):
         with self.assertRaisesRegex(ValueError,"INVALID_ARTICLE_ID"):
