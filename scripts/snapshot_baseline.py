@@ -10,7 +10,7 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from snapshot_integrity import validate
+from snapshot_integrity import RANGES, validate
 
 ALLOWED = ("Master_Index", "MRI_Research_Watch")
 
@@ -32,6 +32,8 @@ def verify_against_baseline(values, baseline):
         observed_range = b.get("provider_range")
         if not isinstance(observed_range, str) or not observed_range.startswith(tab + "!"):
             raise ValueError("INVALID_BASELINE_RANGE:" + tab)
+        if observed_range != tab + "!" + RANGES[tab]:
+            raise ValueError("BASELINE_SNAPSHOT_RANGE_MISMATCH:" + tab)
         rows = values[tab]
         if len(rows) < minimum:
             raise ValueError("SNAPSHOT_BELOW_OBSERVED_BASELINE:" + tab)
