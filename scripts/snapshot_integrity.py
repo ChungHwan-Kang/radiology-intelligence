@@ -6,7 +6,7 @@ authentication of the Google account, the producer, or completeness of its read.
 import hashlib
 import json
 
-RANGES = {"Master_Index": "A1:Z1000", "MRI_Research_Watch": "A1:S1000"}
+RANGES = {"Master_Index": "A1:Z1026", "MRI_Research_Watch": "A1:S1000"}
 
 
 def digest(rows):
