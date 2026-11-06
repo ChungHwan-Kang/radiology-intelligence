@@ -110,7 +110,11 @@ def build_source_review_backlog(master,watch,active,source_states,limit=5):
         doi=norm_doi(row.get("DOI",""))
         title=(row.get("Title") or "").strip()
         if not doi or not title or doi in seen or doi in reserved_dois or title.casefold() in reserved_titles: continue
-        if source_record_eligible(source_states.get(doi),require_evidence=True): continue
+        evidence=source_states.get(doi)
+        if source_record_eligible(evidence,require_evidence=True): continue
+        # A partially reviewed paper should keep its status and pending checks
+        # across runs, rather than silently reverting to a new unreviewed item.
+        in_progress=(isinstance(evidence,dict) and evidence.get("status")=="SOURCE_REVIEW_IN_PROGRESS")
         seen.add(doi)
         priority=(row.get("Priority") or "").strip().upper()
         rank={"HIGH":0,"MEDIUM":1,"LOW":2}.get(priority,3)
@@ -118,7 +122,8 @@ def build_source_review_backlog(master,watch,active,source_states,limit=5):
         except ValueError: watch_row=0
         candidates.append((rank,-watch_row,doi,{
             "doi":doi,"title":title,"priority":priority or "UNSPECIFIED",
-            "watch_row":watch_row,"review_state":"SOURCE_REVIEW_REQUIRED",
+            "watch_row":watch_row,"review_state":"SOURCE_REVIEW_IN_PROGRESS" if in_progress else "SOURCE_REVIEW_REQUIRED",
+            "pending_supplement_review":bool(in_progress and evidence.get("supplement") == "PENDING"),
             "required_next_steps":[
                 "check_original_methods_results",
                 "crosscheck_numerical_claims_and_table_locations",
