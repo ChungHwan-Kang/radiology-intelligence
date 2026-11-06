@@ -77,6 +77,18 @@ class QueueTests(unittest.TestCase):
         self.assertFalse(worklist["public_write_permitted"])
 
     def test_review_backlog_skips_verified_and_linked(self):
+        doi="10.1186/s13244-026-02459-2"
+        self.states[doi]={
+            "status":"SOURCE_VERIFIED",
+            "original_methods_results":True,
+            "quantitative_claims":True,
+            "supplement":"VERIFIED",
+            "source_url":"https://doi.org/"+doi,
+            "methods_locator":"Methods section",
+            "results_locator":"Results/Table 2",
+            "reviewed_by":"editor",
+            "reviewed_at":"2026-11-06"
+        }
         worklist=build_source_review_backlog([],self.watch,self.active,self.states)
         self.assertEqual(worklist["entries"],[])
         self.watch[0]["Existing Master ID"]="RI-030"
