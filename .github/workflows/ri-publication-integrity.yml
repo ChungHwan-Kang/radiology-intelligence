@@ -11,6 +11,8 @@ on:
       - 'scripts/verify_publication.py'
       - 'scripts/private_editorial_gate.py'
       - 'scripts/editorial_queue.py'
+      - 'tests/test_research_preview.py'
+      - 'scripts/research_preview.py'
       - 'tests/test_publication_transaction.py'
       - 'tests/test_sheets_bridge.py'
       - 'scripts/publication_transaction.py'
