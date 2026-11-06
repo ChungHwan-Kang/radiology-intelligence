@@ -101,3 +101,23 @@ explicitly PENDING until verified with run logs and readbacks.
 - Current RI-031 remains `SOURCE_REVIEW_PARTIAL / QA_PENDING` until original source
   Methods/Results/figures/supplements are checked.
 - Existing published RI-025—RI-030 are not rewritten without correction authorization.
+
+
+## 2026-11-06: two-tab candidate queue, fail-closed fallback
+
+Added `scripts/editorial_queue.py` and `tests/test_editorial_queue.py` to this existing repository. The queue takes **read-only CSV snapshots** of the existing `Master_Index` (with actual `Content Stage` column) and `MRI_Research_Watch` tabs. It DOES NOT create or modify any spreadsheet tab or article ID. `source_states.json` must come from an explicitly reviewed primary paper; these are verification declarations, **not autonomous literature fact-checking**.
+
+Example command (all paths private; no scheduled task created):
+
+```powershell
+python scripts/editorial_queue.py --master "C:\\PRIVATE\\Master_Index.csv" --watch "C:\\PRIVATE\\MRI_Research_Watch.csv" --active "C:\\PRIVATE\\active.json" --sources "C:\\PRIVATE\\source_states.json" --output "C:\\PRIVATE\\queue_decision.json"
+```
+
+Example active file: `{"article_id":"RI-031","state":"SOURCE_BLOCKED","doi":"10.1002/jmri.70589"}`.
+Example verified availability: `{"10.1186/s13244-026-02459-2":"SOURCE_VERIFIED"}` only if original paper actually checked.
+
+With a blocked RI-031, the returned decision `RESEARCH_ALTERNATE` permits **private primary-source research** into P-SMART, but `no_new_ri_id=true` and `public_write_permitted=false`. Under any non-blocked active state the outcome is `RESUME_ACTIVE`. Source blocks or lack of candidates never authorize publication.
+
+Unit-test command: `python -m unittest discover -s tests -p "test_*.py" -v`. This now covers eight gate tests plus eight queue tests. Local isolated Python reproduction of this logic passed 16/16 on 2026-11-06, but the GitHub-hosted CI execution logs were not accessible; remote CI should remain UNVERIFIED until its actual run is checked.
+
+**Integration boundary:** a ChatGPT task with Google Drive/Sheets access can read and decide, but the Python CLI cannot access private connected Sheets or Google Docs by itself. A separate authorized export/runner step must produce the private CSV and evidence JSON for this CLI. Neither the task nor this public repository may falsely claim local Windows execution. Keep completed public RI-025–RI-030 unchanged and article-specific approval mandatory.
