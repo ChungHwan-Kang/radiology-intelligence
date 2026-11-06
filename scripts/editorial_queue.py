@@ -120,11 +120,12 @@ def build_source_review_backlog(master,watch,active,source_states,limit=5):
         rank={"HIGH":0,"MEDIUM":1,"LOW":2}.get(priority,3)
         try: watch_row=int(row.get("Watch Row") or 0)
         except ValueError: watch_row=0
-        candidates.append((rank,-watch_row,doi,{
+        candidates.append((0 if in_progress else 1,rank,-watch_row,doi,{
             "doi":doi,"title":title,"priority":priority or "UNSPECIFIED",
             "watch_row":watch_row,"review_state":"SOURCE_REVIEW_IN_PROGRESS" if in_progress else "SOURCE_REVIEW_REQUIRED",
             "pending_supplement_review":bool(in_progress and evidence.get("supplement") == "PENDING"),
-            "required_next_steps":[
+            "review_note_source_url":evidence.get("source_url") if in_progress and isinstance(evidence.get("source_url"),str) else None,
+            "required_next_steps":evidence.get("pending_tasks") if in_progress and isinstance(evidence.get("pending_tasks"),list) and all(isinstance(x,str) for x in evidence["pending_tasks"]) else [
                 "check_original_methods_results",
                 "crosscheck_numerical_claims_and_table_locations",
                 "review_supplement_and_limitations",
@@ -132,8 +133,8 @@ def build_source_review_backlog(master,watch,active,source_states,limit=5):
             ],
             "article_id":None,"public_write_permitted":False
         }))
-    candidates.sort(key=lambda item:(item[0],item[1],item[2]))
-    return {"status":"PRIVATE_SOURCE_REVIEW_BACKLOG","entries":[x[3] for x in candidates[:limit]],
+    candidates.sort(key=lambda item:(item[0],item[1],item[2],item[3]))
+    return {"status":"PRIVATE_SOURCE_REVIEW_BACKLOG","entries":[x[4] for x in candidates[:limit]],
             "candidate_count":len(candidates),"article_id_assigned":False,
             "source_verification_performed":False,"public_write_permitted":False}
 
