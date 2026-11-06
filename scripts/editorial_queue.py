@@ -41,7 +41,7 @@ def source_record_eligible(entry, require_evidence=False):
         if not isinstance(val, str) or not val.strip():
             return False
     date=entry.get("reviewed_at")
-    if not isinstance(date, str) or not re.fullmatch(r"\\d{4}-\\d{2}-\\d{2}",date):
+    if not isinstance(date, str) or not re.fullmatch(r"\d{4}-\d{2}-\d{2}",date):
         return False
     return True
 
