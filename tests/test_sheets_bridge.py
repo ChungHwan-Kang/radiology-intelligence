@@ -17,6 +17,25 @@ class SheetsBridgeTests(unittest.TestCase):
            {"article_id":"RI-031","state":"SOURCE_BLOCKED","doi":"10.1002/jmri.70589"},
            {"10.1186/s13244-026-02459-2":"SOURCE_VERIFIED"})
         self.assertEqual(r["candidate_title"],"P-SMART");self.assertFalse(r["public_write_permitted"])
+    def test_duplicate_nonkey_header_preserves_both_values(self):
+        self.data["Master_Index"]=[
+            ["ID","DOI","Content Stage","Published Date","Published Date"],
+            ["RI-030","10.1002/jmri.70592","Published","2026-11-03","2026-11-04"]]
+        result=bridge(self.data,self.dest)
+        cols=read_csv(self.dest/"Master_Index.csv")[0]
+        self.assertEqual(cols["Published Date"],"2026-11-03")
+        self.assertEqual(cols["Published Date [COL_E]"],"2026-11-04")
+        self.assertEqual(result["header_disambiguations"]["Master_Index"],
+            [{"column":"E","original":"Published Date","csv_header":"Published Date [COL_E]"}])
+        self.assertEqual(self.data["Master_Index"][0].count("Published Date"),2)
+
+    def test_duplicate_required_header_fails_closed(self):
+        self.data["Master_Index"]=[
+            ["ID","DOI","Content Stage","DOI"],
+            ["RI-030","10.1002/jmri.70592","Published","10.1000/different"]]
+        with self.assertRaisesRegex(ValueError,"AMBIGUOUS_REQUIRED_HEADER"):
+            bridge(self.data,self.dest)
+
     def test_missing_tabs(self):
         with self.assertRaisesRegex(ValueError,"MISSING_REQUIRED_TWO_TABS"):bridge({"Master_Index":[]},self.dest)
     def test_missing_header(self):
