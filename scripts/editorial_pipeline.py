@@ -19,6 +19,13 @@ def _write(path,data):
 
 def execute(values,active,source_states,private_root,research=None,article=None,require_complete=False):
     root=private_root.resolve()
+    if require_complete:
+        # Do not overwrite or reuse artifacts from a previous production attempt.
+        # This is deliberately before writing even the blocked-run manifest.
+        if any((ancestor / ".git").exists() for ancestor in (root, *root.parents)):
+            raise ValueError("PRIVATE_OUTPUT_INSIDE_GIT_REPOSITORY")
+        if root.exists() and (not root.is_dir() or any(root.iterdir())):
+            raise ValueError("PRIVATE_RUN_DIRECTORY_NOT_EMPTY")
     steps=[]
     def step(name,status,note=""):steps.append({"stage":name,"status":status,"notes":note})
     # Reject a bounded sample when CLI is used as a production runner.
