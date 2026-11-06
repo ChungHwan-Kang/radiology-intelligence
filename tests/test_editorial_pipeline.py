@@ -42,6 +42,18 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(result["selected"]["decision"],"NO_ELIGIBLE_SOURCE")
         self.assertFalse((self.out/"private_candidate_assignment.json").exists())
 
+    def test_blocked_active_produces_private_evidence_backlog(self):
+        import json
+        self.states={}
+        result=execute(self.values,self.active,self.states,self.out)
+        self.assertEqual(result["selected"]["decision"],"SOURCE_BLOCKED")
+        backlog=json.loads((self.out/"private_source_review_backlog.json").read_text(encoding="utf-8"))
+        self.assertEqual(backlog["candidate_count"],1)
+        self.assertEqual(backlog["entries"][0]["doi"],"10.1186/s13244-026-02459-2")
+        self.assertFalse(backlog["public_write_permitted"])
+        self.assertFalse(backlog["article_id_assigned"])
+        self.assertFalse(result["public_write_performed"])
+
     def test_production_snapshot_block(self):
         result=execute(self.values,self.active,self.states,self.out,self.note,require_complete=True)
         self.assertEqual(result["state"],"BLOCKED")
