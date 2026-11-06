@@ -16,10 +16,19 @@ def _write(path,data):
     path.parent.mkdir(parents=True,exist_ok=True)
     path.write_text(json.dumps(data,ensure_ascii=False,indent=2),encoding="utf-8")
 
-def execute(values,active,source_states,private_root,research=None,article=None):
+def execute(values,active,source_states,private_root,research=None,article=None,require_complete=False):
     root=private_root.resolve()
     steps=[]
     def step(name,status,note=""):steps.append({"stage":name,"status":status,"notes":note})
+    # Reject a bounded sample when CLI is used as a production runner.
+    if require_complete and values.get("_snapshot_complete") is not True:
+        step("CONNECTED_SHEETS_SNAPSHOT","BLOCKED","Complete source snapshot not attested")
+        report={"run_type":"LOCAL_OFFLINE_INTEGRATION","snapshot_complete":False,
+                "state":"BLOCKED","steps":steps,"selected":None,
+                "public_write_performed":False,"new_ri_id_assigned":False,
+                "cloud_api_calls_by_script":0,"local_windows_kch_runner_confirmed":False}
+        _write(root/"run_manifest.json",report)
+        return report
     snapshot=bridge(values,root/"sheets_snapshot")
     step("CONNECTED_SHEETS_SNAPSHOT","PASS",f"Master {snapshot['tabs']['Master_Index']} / Watch {snapshot['tabs']['MRI_Research_Watch']} rows supplied")
     master=read_csv(root/"sheets_snapshot"/"Master_Index.csv")
@@ -73,9 +82,9 @@ def main():
     try:
         def load(path):return json.loads(path.read_text(encoding="utf-8")) if path else None
         result=execute(load(a.values_json),load(a.active_json),load(a.sources_json),
-            a.private_dir,load(a.research_json),load(a.article_json))
+            a.private_dir,load(a.research_json),load(a.article_json),require_complete=True)
         print(json.dumps(result,ensure_ascii=False,indent=2))
-        return 0 if result["state"]!="FAIL" else 2
+        return 0 if result["state"]=="PARTIAL" else 2
     except (ValueError,OSError,KeyError,json.JSONDecodeError) as err:
         print("ERROR: "+str(err),file=sys.stderr);return 3
 if __name__=="__main__":sys.exit(main())
