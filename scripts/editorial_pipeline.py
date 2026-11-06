@@ -7,7 +7,7 @@ from __future__ import annotations
 import argparse,json,sys
 from pathlib import Path
 from types import SimpleNamespace
-from editorial_queue import select,read_csv,norm_doi
+from editorial_queue import select,read_csv,norm_doi,build_source_review_backlog
 from private_editorial_gate import prepare as prepare_article
 from research_preview import prepare as prepare_research
 from sheets_bridge import bridge
@@ -55,6 +55,8 @@ def execute(values,active,source_states,private_root,research=None,article=None,
     watch=read_csv(root/"sheets_snapshot"/"MRI_Research_Watch.csv")
     decision=select(master,watch,active,source_states,require_source_evidence=require_complete)
     _write(root/"queue_decision.json",decision)
+    if decision["decision"] in ("SOURCE_BLOCKED","NO_ELIGIBLE_SOURCE"):
+        _write(root/"private_source_review_backlog.json",build_source_review_backlog(master,watch,active,source_states))
     step("DOI_DEDUP_AND_SELECTION","PASS",decision["decision"])
     if decision["decision"]=="RESEARCH_ALTERNATE":
         if research is None:
