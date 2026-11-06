@@ -94,6 +94,28 @@ class QueueTests(unittest.TestCase):
         self.watch[0]["Existing Master ID"]="RI-030"
         self.assertEqual(build_source_review_backlog([],self.watch,self.active,{})["entries"],[])
 
+    def test_in_progress_review_survives_blocked_run_without_verification(self):
+        doi="10.1186/s13244-026-02459-2"
+        self.states[doi]={
+            "status":"SOURCE_REVIEW_IN_PROGRESS",
+            "supplement":"PENDING",
+            "methods_locator":"Original article Methods",
+            "results_locator":"Original article Results"
+        }
+        worklist=build_source_review_backlog([],self.watch,self.active,self.states)
+        self.assertEqual(worklist["candidate_count"],1)
+        item=worklist["entries"][0]
+        self.assertEqual(item["review_state"],"SOURCE_REVIEW_IN_PROGRESS")
+        self.assertTrue(item["pending_supplement_review"])
+        self.assertIsNone(item["article_id"])
+        self.assertFalse(worklist["source_verification_performed"])
+
+    def test_unreviewed_candidate_has_no_pending_supplement_attestation(self):
+        worklist=build_source_review_backlog([],self.watch,self.active,{})
+        item=worklist["entries"][0]
+        self.assertEqual(item["review_state"],"SOURCE_REVIEW_REQUIRED")
+        self.assertFalse(item["pending_supplement_review"])
+
     def test_review_backlog_deduplicates_and_respects_limit(self):
         new=row("10.1000/other","Other","MEDIUM",index=77)
         self.watch.extend([new,dict(new)])
