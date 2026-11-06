@@ -36,6 +36,20 @@ class SheetsBridgeTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,"AMBIGUOUS_REQUIRED_HEADER"):
             bridge(self.data,self.dest)
 
+    def test_corrupted_existing_master_reference_rejected(self):
+        self.data["MRI_Research_Watch"][1][4]="74"
+        with self.assertRaisesRegex(ValueError,"INVALID_MASTER_REFERENCE_ROW_2"):
+            bridge(self.data,self.dest)
+
+    def test_corrupted_priority_rejected(self):
+        self.data["MRI_Research_Watch"][1][3]="74"
+        with self.assertRaisesRegex(ValueError,"INVALID_PRIORITY_ROW_2"):
+            bridge(self.data,self.dest)
+
+    def test_valid_existing_ri_reference_accepted(self):
+        self.data["MRI_Research_Watch"][1][4]="RI-030"
+        self.assertEqual(bridge(self.data,self.dest)["tabs"]["MRI_Research_Watch"],2)
+
     def test_missing_tabs(self):
         with self.assertRaisesRegex(ValueError,"MISSING_REQUIRED_TWO_TABS"):bridge({"Master_Index":[]},self.dest)
     def test_missing_header(self):
