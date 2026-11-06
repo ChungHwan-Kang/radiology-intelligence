@@ -17,7 +17,35 @@ def read_csv(path):
             if not row.get("Watch Row"): row["Watch Row"]=str(i)
         return rows
 
-def select(master,watch,active,source_states):
+def source_record_eligible(entry, require_evidence=False):
+    """Only checks the presence of recorded review evidence, not factual truth.
+
+    Legacy string flags remain available for offline fixture compatibility,
+    but are never sufficient for the production pipeline/queue CLI.
+    """
+    if not require_evidence:
+        return entry == "SOURCE_VERIFIED" or (
+            isinstance(entry, dict) and entry.get("status") == "SOURCE_VERIFIED"
+        )
+    if not isinstance(entry, dict) or entry.get("status") != "SOURCE_VERIFIED":
+        return False
+    if entry.get("original_methods_results") is not True or entry.get("quantitative_claims") is not True:
+        return False
+    if entry.get("supplement") not in ("VERIFIED", "NOT_APPLICABLE", "UNAVAILABLE_DISCLOSED"):
+        return False
+    url=entry.get("source_url")
+    if not isinstance(url, str) or not url.startswith("https://"):
+        return False
+    for field in ("methods_locator", "results_locator", "reviewed_by"):
+        val=entry.get(field)
+        if not isinstance(val, str) or not val.strip():
+            return False
+    date=entry.get("reviewed_at")
+    if not isinstance(date, str) or not re.fullmatch(r"\\d{4}-\\d{2}-\\d{2}",date):
+        return False
+    return True
+
+def select(master,watch,active,source_states,require_source_evidence=False):
     protected_dois=set()
     protected_titles=set()
     for item in master:
@@ -43,7 +71,7 @@ def select(master,watch,active,source_states):
         doi=norm_doi(row.get("DOI",""))
         title=(row.get("Title") or "").strip()
         if not doi or not title or doi in protected_dois or title.casefold() in protected_titles: continue
-        if source_states.get(doi)!="SOURCE_VERIFIED": continue
+        if not source_record_eligible(source_states.get(doi), require_source_evidence): continue
         candidates.append((0 if (row.get("Priority") or "").upper()=="HIGH" else 1,
                            -int(row.get("Watch Row") or 0),doi,title))
     if not candidates:
@@ -65,7 +93,7 @@ def main():
         raise ValueError("PRIVATE_OUTPUT_INSIDE_GIT_REPOSITORY")
     active=json.loads(a.active.read_text(encoding="utf-8"))
     sources=json.loads(a.sources.read_text(encoding="utf-8"))
-    decision=select(read_csv(a.master),read_csv(a.watch),active,sources)
+    decision=select(read_csv(a.master),read_csv(a.watch),active,sources,require_source_evidence=True)
     out.parent.mkdir(parents=True,exist_ok=True)
     out.write_text(json.dumps(decision,ensure_ascii=False,indent=2),encoding="utf-8")
     print(json.dumps(decision,ensure_ascii=False))
