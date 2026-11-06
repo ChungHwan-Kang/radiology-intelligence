@@ -14,3 +14,5 @@ def validate(values):
         if t.get("rows")!=len(rows) or t.get("sha256")!=digest(rows):
             raise ValueError("SNAPSHOT_HASH_OR_COUNT_MISMATCH")
     return envelope
+
+# The producer must attest to the canonical full range separately.
