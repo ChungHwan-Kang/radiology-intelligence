@@ -141,11 +141,16 @@ def prepare(args):
     if not output.is_relative_to(private_root):
         raise ValueError("PRIVATE_STAGING_PATH_ESCAPE")
     output.mkdir(parents=True, exist_ok=True, mode=0o700)
+    # Store and bind approval to the exact input JSON as well as the HTML.
+    source_bytes = json.dumps(article, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    source_sha = hashlib.sha256(source_bytes).hexdigest()
+    (output / "article.json").write_bytes(source_bytes)
     page = preview(article) if not errors else ""
     if page: errors.extend(html_issues(page))
     state = "SOURCE_BLOCKED" if any("SOURCE_BLOCKED" in x for x in errors) else ("QA_BLOCKED" if errors else "APPROVAL_PENDING")
     record = {"article_id": article.get("id"), "state": state, "qa_issues": errors,
               "public_write_permitted": False, "publisher": "NONE",
+              "source_sha256": source_sha,
               "source_checks_are_declarations_not_independent_verification": True}
     target = output / "review.html"
     if not errors:
@@ -170,6 +175,9 @@ def approve(args):
     if record["article_id"] != args.article_id or record["state"] != "APPROVAL_PENDING":
         raise ValueError("NOT_READY_FOR_APPROVAL")
     digest = hashlib.sha256((target / "review.html").read_bytes()).hexdigest()
+    source_digest = hashlib.sha256((target / "article.json").read_bytes()).hexdigest()
+    if source_digest != record.get("source_sha256"):
+        raise ValueError("APPROVAL_SOURCE_CHANGED")
     if digest != record.get("sha256") or args.sha256 != digest:
         raise ValueError("APPROVAL_SHA256_MISMATCH")
     record["state"] = "APPROVED_FOR_PUBLISH"
