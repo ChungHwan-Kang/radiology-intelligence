@@ -11,6 +11,7 @@ from editorial_queue import select,read_csv,norm_doi
 from private_editorial_gate import prepare as prepare_article
 from research_preview import prepare as prepare_research
 from sheets_bridge import bridge
+from snapshot_integrity import validate as validate_snapshot
 
 def _write(path,data):
     path.parent.mkdir(parents=True,exist_ok=True)
@@ -29,6 +30,17 @@ def execute(values,active,source_states,private_root,research=None,article=None,
                 "cloud_api_calls_by_script":0,"local_windows_kch_runner_confirmed":False}
         _write(root/"run_manifest.json",report)
         return report
+    if require_complete:
+        try:
+            validate_snapshot(values)
+        except (ValueError, TypeError, OverflowError) as exc:
+            step("CONNECTED_SHEETS_SNAPSHOT","BLOCKED",str(exc))
+            report={"run_type":"LOCAL_OFFLINE_INTEGRATION","snapshot_complete":False,
+                    "state":"BLOCKED","steps":steps,"selected":None,
+                    "public_write_performed":False,"new_ri_id_assigned":False,
+                    "cloud_api_calls_by_script":0,"local_windows_kch_runner_confirmed":False}
+            _write(root/"run_manifest.json",report)
+            return report
     snapshot=bridge(values,root/"sheets_snapshot")
     step("CONNECTED_SHEETS_SNAPSHOT","PASS",f"Master {snapshot['tabs']['Master_Index']} / Watch {snapshot['tabs']['MRI_Research_Watch']} rows supplied")
     master=read_csv(root/"sheets_snapshot"/"Master_Index.csv")
