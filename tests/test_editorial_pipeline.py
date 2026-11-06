@@ -20,6 +20,13 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(r["selected"]["decision"],"RESEARCH_ALTERNATE")
         self.assertFalse(r["public_write_performed"]);self.assertFalse(r["new_ri_id_assigned"])
         self.assertEqual(r["steps"][2]["status"],"PASS")
+    def test_production_snapshot_block(self):
+        result=execute(self.values,self.active,self.states,self.out,self.note,require_complete=True)
+        self.assertEqual(result["state"],"BLOCKED")
+    def test_production_snapshot_complete(self):
+        self.values["_snapshot_complete"]=True
+        result=execute(self.values,self.active,self.states,self.out,self.note,require_complete=True)
+        self.assertEqual(result["selected"]["decision"],"RESEARCH_ALTERNATE")
     def test_idempotent(self):
         self.assertEqual(execute(self.values,self.active,self.states,self.out,self.note),
                          execute(self.values,self.active,self.states,self.out,self.note))
