@@ -21,6 +21,27 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(r["selected"]["decision"],"RESEARCH_ALTERNATE")
         self.assertFalse(r["public_write_performed"]);self.assertFalse(r["new_ri_id_assigned"])
         self.assertEqual(r["steps"][2]["status"],"PASS")
+    def test_new_candidate_creates_private_assignment_without_ri_id(self):
+        self.active={}
+        result=execute(self.values,self.active,self.states,self.out)
+        self.assertEqual(result["selected"]["decision"],"PREPARE_CANDIDATE")
+        import json
+        assignment=json.loads((self.out/"private_candidate_assignment.json").read_text(encoding="utf-8"))
+        self.assertEqual(assignment["candidate_doi"],"10.1186/s13244-026-02459-2")
+        self.assertIsNone(assignment["article_id"])
+        self.assertFalse(assignment["public_write_permitted"])
+        self.assertFalse(assignment["source_verification_independent"])
+        self.assertFalse(result["new_ri_id_assigned"])
+        self.assertFalse(result["public_write_performed"])
+        self.assertTrue(any(x["stage"]=="PRIVATE_FINAL_HTML_QA" and x["status"]=="BLOCKED" for x in result["steps"]))
+
+    def test_new_candidate_with_no_verified_source_creates_no_assignment(self):
+        self.active={}
+        self.states={}
+        result=execute(self.values,self.active,self.states,self.out)
+        self.assertEqual(result["selected"]["decision"],"NO_ELIGIBLE_SOURCE")
+        self.assertFalse((self.out/"private_candidate_assignment.json").exists())
+
     def test_production_snapshot_block(self):
         result=execute(self.values,self.active,self.states,self.out,self.note,require_complete=True)
         self.assertEqual(result["state"],"BLOCKED")
