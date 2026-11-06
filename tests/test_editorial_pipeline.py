@@ -28,7 +28,7 @@ class PipelineTests(unittest.TestCase):
         self.values["_snapshot_complete"]=True
         self.values["_snapshot_envelope"]={"tabs":{
             name:{"range":rng,"rows":len(self.values[name]),"sha256":digest(self.values[name])}
-            for name,rng in (("Master_Index","A1:Z1000"),("MRI_Research_Watch","A1:S1000"))}}
+            for name,rng in (("Master_Index","A1:Z1026"),("MRI_Research_Watch","A1:S1000"))}}
         result=execute(self.values,self.active,self.states,self.out,self.note,require_complete=True)
         self.assertEqual(result["selected"]["decision"],"RESEARCH_ALTERNATE")
     def test_production_existing_directory_with_old_result_is_rejected(self):
