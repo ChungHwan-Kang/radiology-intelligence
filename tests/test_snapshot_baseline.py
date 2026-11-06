@@ -14,7 +14,7 @@ def case():
                                            for name, rng in RANGES.items()}}
     baseline = {"spreadsheet_id": "known-connected-sheet", "tabs": {
         name: {"observed_rows": len(data[name]), "provider_range": name + "!" + rng,
-               "headers": data[name][0]} for name, rng in RANGES.items()}}
+               "headers": list(data[name][0])} for name, rng in RANGES.items()}}
     return data, baseline
 
 class BaselineTests(unittest.TestCase):
