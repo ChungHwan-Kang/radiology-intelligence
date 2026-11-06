@@ -51,7 +51,29 @@ class PipelineTests(unittest.TestCase):
             name:{"range":rng,"rows":len(self.values[name]),"sha256":digest(self.values[name])}
             for name,rng in (("Master_Index","A1:Z1026"),("MRI_Research_Watch","A1:S1000"))}}
         result=execute(self.values,self.active,self.states,self.out,self.note,require_complete=True)
+        self.assertEqual(result["selected"]["decision"],"SOURCE_BLOCKED")
+        self.assertFalse((self.out/"private_research").exists())
+    def test_production_source_evidence_record_selects_only_private_research(self):
+        self.values["_snapshot_complete"]=True
+        self.values["_snapshot_envelope"]={"tabs":{
+            name:{"range":rng,"rows":len(self.values[name]),"sha256":digest(self.values[name])}
+            for name,rng in (("Master_Index","A1:Z1026"),("MRI_Research_Watch","A1:S1000"))}}
+        doi="10.1186/s13244-026-02459-2"
+        self.states[doi]={
+            "status":"SOURCE_VERIFIED",
+            "original_methods_results":True,
+            "quantitative_claims":True,
+            "supplement":"UNAVAILABLE_DISCLOSED",
+            "source_url":"https://doi.org/"+doi,
+            "methods_locator":"Methods section",
+            "results_locator":"Results section",
+            "reviewed_by":"editor",
+            "reviewed_at":"2026-11-06"}
+        result=execute(self.values,self.active,self.states,self.out,self.note,require_complete=True)
         self.assertEqual(result["selected"]["decision"],"RESEARCH_ALTERNATE")
+        self.assertFalse(result["new_ri_id_assigned"])
+        self.assertFalse(result["public_write_performed"])
+
     def test_production_existing_directory_with_old_result_is_rejected(self):
         self.out.mkdir(parents=True)
         (self.out / "queue_decision.json").write_text('{"old":"data"}')
