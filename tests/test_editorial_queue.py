@@ -1,7 +1,7 @@
 import sys,unittest
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/"scripts"))
-from editorial_queue import select,norm_doi
+from editorial_queue import select,norm_doi,build_source_review_backlog
 
 def row(doi,title,priority="HIGH",existing="",index=1):
     return {"DOI":doi,"Title":title,"RI Article Candidate":"YES","Priority":priority,
@@ -67,6 +67,29 @@ class QueueTests(unittest.TestCase):
             "reviewed_at":"2026-11-06"
         }
         self.assertEqual(select([],self.watch,self.active,self.states,require_source_evidence=True)["decision"],"SOURCE_BLOCKED")
+
+    def test_unverified_source_review_backlog_prioritizes_high_and_never_allocates(self):
+        worklist=build_source_review_backlog([],self.watch,self.active,{})
+        self.assertEqual(worklist["candidate_count"],1)
+        self.assertEqual(worklist["entries"][0]["doi"],"10.1186/s13244-026-02459-2")
+        self.assertIsNone(worklist["entries"][0]["article_id"])
+        self.assertFalse(worklist["source_verification_performed"])
+        self.assertFalse(worklist["public_write_permitted"])
+
+    def test_review_backlog_skips_verified_and_linked(self):
+        worklist=build_source_review_backlog([],self.watch,self.active,self.states)
+        self.assertEqual(worklist["entries"],[])
+        self.watch[0]["Existing Master ID"]="RI-030"
+        self.assertEqual(build_source_review_backlog([],self.watch,self.active,{})["entries"],[])
+
+    def test_review_backlog_deduplicates_and_respects_limit(self):
+        new=row("10.1000/other","Other","MEDIUM",index=77)
+        self.watch.extend([new,dict(new)])
+        worklist=build_source_review_backlog([],self.watch,self.active,{},limit=1)
+        self.assertEqual(worklist["candidate_count"],2)
+        self.assertEqual(len(worklist["entries"]),1)
+        with self.assertRaisesRegex(ValueError,"INVALID_REVIEW_BACKLOG_LIMIT"):
+            build_source_review_backlog([],self.watch,self.active,{},limit=0)
 
     def test_default_watch_row_import(self):
         import csv,tempfile
