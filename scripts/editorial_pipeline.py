@@ -12,6 +12,7 @@ from private_editorial_gate import prepare as prepare_article
 from research_preview import prepare as prepare_research
 from sheets_bridge import bridge
 from snapshot_integrity import validate as validate_snapshot
+from snapshot_baseline import verify_against_baseline
 
 def _write(path,data):
     path.parent.mkdir(parents=True,exist_ok=True)
@@ -97,10 +98,14 @@ def main():
     for name in ("values-json","active-json","sources-json","private-dir"):
         p.add_argument("--"+name,required=True,type=Path)
     p.add_argument("--research-json",type=Path);p.add_argument("--article-json",type=Path)
+    p.add_argument("--baseline-json",type=Path,required=True,
+                   help="Separately recorded, operator-verified provider read baseline")
     a=p.parse_args()
     try:
         def load(path):return json.loads(path.read_text(encoding="utf-8")) if path else None
-        result=execute(load(a.values_json),load(a.active_json),load(a.sources_json),
+        values=load(a.values_json)
+        verify_against_baseline(values,load(a.baseline_json))
+        result=execute(values,load(a.active_json),load(a.sources_json),
             a.private_dir,load(a.research_json),load(a.article_json),require_complete=True)
         print(json.dumps(result,ensure_ascii=False,indent=2))
         return 0 if result["state"]=="PARTIAL" else 2
