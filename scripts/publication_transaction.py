@@ -21,7 +21,7 @@ def plan_publish(private_root,article_id,published_dois=(),published_ids=(),exis
         raise ValueError("ARTICLE_SPECIFIC_APPROVAL_REQUIRED")
     if st.get("approval_sha256")!=sha or st.get("sha256")!=sha:
         raise ValueError("APPROVED_HTML_CHANGED")
-    if st.get("source_sha256") and hashlib.sha256((path/"article.json").read_bytes()).hexdigest()!=st["source_sha256"]:\n        raise ValueError("APPROVED_SOURCE_CHANGED")\n    if source.get("id")!=article_id or not re.fullmatch(r"ri-[0-9]{3}-[a-z0-9-]+\.html",source.get("slug","")):
+    if not st.get("source_sha256") or hashlib.sha256((path/"article.json").read_bytes()).hexdigest()!=st["source_sha256"]:\n        raise ValueError("APPROVED_SOURCE_CHANGED")\n    if source.get("id")!=article_id or not re.fullmatch(r"ri-[0-9]{3}-[a-z0-9-]+\.html",source.get("slug","")):
         raise ValueError("ARTICLE_ID_SLUG_MISMATCH")
     if source["slug"][:6]!=article_id.lower():
         raise ValueError("ARTICLE_ID_SLUG_MISMATCH")
