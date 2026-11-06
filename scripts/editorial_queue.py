@@ -12,7 +12,10 @@ def norm_doi(value):
 
 def read_csv(path):
     with path.open("r",encoding="utf-8-sig",newline="") as f:
-        return list(csv.DictReader(f))
+        rows=list(csv.DictReader(f))
+        for i,row in enumerate(rows,start=2):
+            if not row.get("Watch Row"): row["Watch Row"]=str(i)
+        return rows
 
 def select(master,watch,active,source_states):
     protected_dois=set()
