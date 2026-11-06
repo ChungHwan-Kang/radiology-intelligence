@@ -18,7 +18,7 @@ def payload():
     }
     data["_snapshot_envelope"] = {"tabs": {
         key: {"range": rng, "rows": len(data[key]), "sha256": digest(data[key])}
-        for key, rng in (("Master_Index", "A1:Z1000"), ("MRI_Research_Watch", "A1:S1000"))
+        for key, rng in (("Master_Index", "A1:Z1026"), ("MRI_Research_Watch", "A1:S1000"))
     }}
     return data
 
