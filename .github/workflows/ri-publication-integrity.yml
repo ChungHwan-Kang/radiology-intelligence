@@ -12,6 +12,8 @@ on:
       - 'scripts/private_editorial_gate.py'
       - 'scripts/editorial_queue.py'
       - 'scripts/editorial_pipeline.py'
+      - 'scripts/snapshot_integrity.py'
+      - 'tests/test_snapshot_integrity.py'
       - 'tests/test_editorial_pipeline.py'
       - 'tests/test_research_preview.py'
       - 'scripts/research_preview.py'
