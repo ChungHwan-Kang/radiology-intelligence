@@ -64,6 +64,28 @@ def execute(values,active,source_states,private_root,research=None,article=None,
         else:
             outcome=prepare_research(research,root/"private_research")
             step("PRIVATE_RESEARCH_PREVIEW","PASS","No RI ID; noindex; approval_possible="+str(outcome["approval_possible"]))
+    elif decision["decision"]=="PREPARE_CANDIDATE":
+        # A verified-source flag is a caller declaration, not a full-text check.
+        # Produce a private editorial assignment without allocating an RI ID.
+        assignment={
+            "status":"PRIVATE_DRAFT_INPUT_REQUIRED",
+            "candidate_doi":decision["candidate_doi"],
+            "candidate_title":decision["candidate_title"],
+            "article_id":None,
+            "source_verification_independent":False,
+            "required_next_inputs":[
+                "original_paper_methods_results_checked",
+                "quantitative_claims_primary_source_locations",
+                "supplement_status_and_limitations",
+                "editorial_article_json",
+                "article_specific_user_approval"
+            ],
+            "public_write_permitted":False,
+            "new_ri_id_assigned":False
+        }
+        _write(root/"private_candidate_assignment.json",assignment)
+        step("PRIVATE_EDITORIAL_ASSIGNMENT","PASS","Source-verified flag only; article source input and independent QA still required")
+        step("PRIVATE_FINAL_HTML_QA","BLOCKED","No verified article input or authorized RI ID supplied")
     elif decision["decision"]=="RESUME_ACTIVE":
         if article is None:
             step("PRIVATE_FINAL_HTML_QA","BLOCKED","Source-verified article input missing")
