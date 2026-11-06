@@ -121,3 +121,19 @@ With a blocked RI-031, the returned decision `RESEARCH_ALTERNATE` permits **priv
 Unit-test command: `python -m unittest discover -s tests -p "test_*.py" -v`. This now covers eight gate tests plus eight queue tests. Local isolated Python reproduction of this logic passed 16/16 on 2026-11-06, but the GitHub-hosted CI execution logs were not accessible; remote CI should remain UNVERIFIED until its actual run is checked.
 
 **Integration boundary:** a ChatGPT task with Google Drive/Sheets access can read and decide, but the Python CLI cannot access private connected Sheets or Google Docs by itself. A separate authorized export/runner step must produce the private CSV and evidence JSON for this CLI. Neither the task nor this public repository may falsely claim local Windows execution. Keep completed public RI-025–RI-030 unchanged and article-specific approval mandatory.
+
+
+## 2026-11-06 bounded end-to-end integration and reproducible evidence
+
+Files added/updated in this EXISTING public code repository (no preapproval article source):
+- `scripts/sheets_bridge.py`: accepts existing connected Sheet value arrays, checks actual `Master_Index` / `MRI_Research_Watch` headers, outputs local private CSV + hash manifest. **It does not authenticate to Google**.
+- `scripts/editorial_pipeline.py`: offline orchestration of CSV bridge -> candidate queue -> active RI-031 source-blocked fallback -> no-ID private research preview / source-verified article QA -> machine-readable run manifest. No publisher.
+- `scripts/research_preview.py`: noindex research-only HTML, explicitly no RI ID / no approval. P-SMART private fallback research-only.
+- `scripts/publication_transaction.py`: approved HTML and DOI/ID duplication preflight plus required multi-system write/readback checklist, **NOT an implemented write dispatcher**.
+- `tests/test_*.py`: source/HTML approval gate, source JSON hash lock, queue, Sheets bridge, research-only preview and publishing preflight regression suites. Local integrated mirror ran 35 tests with PASS; hosted GitHub Actions result is still UNKNOWN.
+
+Latest local bounded data trial used previously read connected Sheets published records RI-025–RI-030 and recent Watch rows including RI-031 (active source-blocked) and P-SMART. The sampled input is not a complete automatically exported 229-row Master / 61-row Watch snapshot. Result: `RESEARCH_ALTERNATE` P-SMART, no RI ID, private `noindex` preview and stage log, no approval or public writes. Source checks for P-SMART relied on the existing Drive research note, not a new full-text publisher verification in that particular local run.
+
+**Do not mark finished:** authorized Google connector -> full private input export, actual installed KCH AI Office Windows invocation, scheduled autonomous final draft and delivery, original-source and terminology independent QA, GitHub Actions hosted job PASS readback, and **postapproval transaction dispatcher with GitHub + two Sheets tabs + Drive + RSS + sitemap + live URL readbacks**. No claim of Windows deployment or cloud-native automation is authorized by this code-only check.
+
+The current proof package and runnable tests exist as local/private session artifacts. Do not upload it to the public repo when it contains connected-sheet snippets or research drafts. Keep public GitHub code-only, RI-031 SOURCE_BLOCKED and RI-025–RI-030 Published.
