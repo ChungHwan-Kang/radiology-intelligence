@@ -33,6 +33,17 @@ class QueueTests(unittest.TestCase):
         self.active={"state":"PUBLISHED","article_id":"RI-031"}
         r=select([],self.watch,self.active,self.states)
         self.assertEqual(r["decision"],"PREPARE_CANDIDATE");self.assertTrue(r["no_new_ri_id"])
+    def test_default_watch_row_import(self):
+        import csv,tempfile
+        from editorial_queue import read_csv
+        with tempfile.TemporaryDirectory() as d:
+            path=Path(d)/"watch.csv"
+            with path.open("w",newline="") as f:
+                writer=csv.DictWriter(f,fieldnames=["DOI","Title"])
+                writer.writeheader()
+                writer.writerow({"DOI":"10.1000/a","Title":"A"})
+                writer.writerow({"DOI":"10.1000/b","Title":"B"})
+            self.assertEqual([r["Watch Row"] for r in read_csv(path)],["2","3"])
     def test_prioritizes_high_over_medium(self):
         self.watch.insert(0,row("10.1000/med","MED","MEDIUM",index=61))
         self.states["10.1000/med"]="SOURCE_VERIFIED"
