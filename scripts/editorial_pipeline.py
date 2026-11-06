@@ -53,7 +53,7 @@ def execute(values,active,source_states,private_root,research=None,article=None,
     step("CONNECTED_SHEETS_SNAPSHOT","PASS",f"Master {snapshot['tabs']['Master_Index']} / Watch {snapshot['tabs']['MRI_Research_Watch']} rows supplied")
     master=read_csv(root/"sheets_snapshot"/"Master_Index.csv")
     watch=read_csv(root/"sheets_snapshot"/"MRI_Research_Watch.csv")
-    decision=select(master,watch,active,source_states)
+    decision=select(master,watch,active,source_states,require_source_evidence=require_complete)
     _write(root/"queue_decision.json",decision)
     step("DOI_DEDUP_AND_SELECTION","PASS",decision["decision"])
     if decision["decision"]=="RESEARCH_ALTERNATE":
