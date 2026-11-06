@@ -31,6 +31,26 @@ class PipelineTests(unittest.TestCase):
             for name,rng in (("Master_Index","A1:Z1000"),("MRI_Research_Watch","A1:S1000"))}}
         result=execute(self.values,self.active,self.states,self.out,self.note,require_complete=True)
         self.assertEqual(result["selected"]["decision"],"RESEARCH_ALTERNATE")
+    def test_production_existing_directory_with_old_result_is_rejected(self):
+        self.out.mkdir(parents=True)
+        (self.out / "queue_decision.json").write_text('{"old":"data"}')
+        self.values["_snapshot_complete"] = True
+        with self.assertRaisesRegex(ValueError, "PRIVATE_RUN_DIRECTORY_NOT_EMPTY"):
+            execute(self.values,self.active,self.states,self.out,self.note,require_complete=True)
+        self.assertEqual((self.out / "queue_decision.json").read_text(), '{"old":"data"}')
+
+    def test_production_output_inside_git_is_rejected(self):
+        self.out.parent.mkdir(parents=True, exist_ok=True)
+        (self.out.parent / ".git").mkdir()
+        self.values["_snapshot_complete"] = True
+        with self.assertRaisesRegex(ValueError, "PRIVATE_OUTPUT_INSIDE_GIT_REPOSITORY"):
+            execute(self.values,self.active,self.states,self.out,self.note,require_complete=True)
+
+    def test_production_empty_existing_directory_allowed_to_block(self):
+        self.out.mkdir(parents=True)
+        result=execute(self.values,self.active,self.states,self.out,self.note,require_complete=True)
+        self.assertEqual(result["state"],"BLOCKED")
+
     def test_idempotent(self):
         self.assertEqual(execute(self.values,self.active,self.states,self.out,self.note),
                          execute(self.values,self.active,self.states,self.out,self.note))
