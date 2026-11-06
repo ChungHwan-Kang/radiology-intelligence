@@ -33,6 +33,41 @@ class QueueTests(unittest.TestCase):
         self.active={"state":"PUBLISHED","article_id":"RI-031"}
         r=select([],self.watch,self.active,self.states)
         self.assertEqual(r["decision"],"PREPARE_CANDIDATE");self.assertTrue(r["no_new_ri_id"])
+    def test_production_rejects_unsubstantiated_legacy_flag(self):
+        r=select([],self.watch,self.active,self.states,require_source_evidence=True)
+        self.assertEqual(r["decision"],"SOURCE_BLOCKED")
+
+    def test_production_accepts_complete_review_record(self):
+        doi="10.1186/s13244-026-02459-2"
+        self.states[doi]={
+            "status":"SOURCE_VERIFIED",
+            "original_methods_results":True,
+            "quantitative_claims":True,
+            "supplement":"UNAVAILABLE_DISCLOSED",
+            "source_url":"https://doi.org/"+doi,
+            "methods_locator":"Original article Methods section",
+            "results_locator":"Original article Results/Table 2",
+            "reviewed_by":"editor",
+            "reviewed_at":"2026-11-06"
+        }
+        r=select([],self.watch,self.active,self.states,require_source_evidence=True)
+        self.assertEqual(r["decision"],"RESEARCH_ALTERNATE")
+        self.assertEqual(r["candidate_doi"],doi)
+
+    def test_production_blocks_missing_primary_results_locator(self):
+        doi="10.1186/s13244-026-02459-2"
+        self.states[doi]={
+            "status":"SOURCE_VERIFIED",
+            "original_methods_results":True,
+            "quantitative_claims":True,
+            "supplement":"VERIFIED",
+            "source_url":"https://doi.org/"+doi,
+            "methods_locator":"Methods section",
+            "reviewed_by":"editor",
+            "reviewed_at":"2026-11-06"
+        }
+        self.assertEqual(select([],self.watch,self.active,self.states,require_source_evidence=True)["decision"],"SOURCE_BLOCKED")
+
     def test_default_watch_row_import(self):
         import csv,tempfile
         from editorial_queue import read_csv
