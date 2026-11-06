@@ -23,7 +23,7 @@ def _table(item,key):
         if not isinstance(cells,list) or len(cells)>len(headers):
             raise ValueError(f'{key}: BAD_ROW_{original_row}')
         record={h:str(cells[i]) if i<len(cells) and cells[i] is not None else '' for i,h in enumerate(headers)}
-        if key=='MRI_Research_Watch':
+        if key=='MRI_Research_Watch' and not record.get('Watch Row'):
             record['Watch Row']=str(original_row)
         filled.append(record)
     fields=headers+(['Watch Row'] if key=='MRI_Research_Watch' and 'Watch Row' not in headers else [])
