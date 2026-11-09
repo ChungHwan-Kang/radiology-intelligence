@@ -84,6 +84,24 @@ class SiteComposerTests(unittest.TestCase):
         self.existing.pop("sitemap.xml")
         with self.assertRaisesRegex(ValueError,"FOUR_SOURCE_FILES_REQUIRED"):
             compose_site_updates(self.existing,self.article)
+    def test_current_repository_site_files_compose_without_touching_old_content(self):
+        root=Path(__file__).resolve().parents[1]
+        actual={name:(root/name).read_text(encoding="utf-8") for name in
+                ("index.html","categories.html","feed.xml","sitemap.xml")}
+        result=compose_site_updates(actual,self.article)
+        self.assertEqual(set(result),set(actual))
+        for name in actual:
+            self.assertNotEqual(actual[name],result[name])
+            self.assertIn("ri-999-synthetic-code-only.html",result[name])
+        # No previously published story is removed, even from other categories.
+        import re
+        for name in actual:
+            old_links=set(re.findall(r'(?:ri|rb)-[0-9]{3}-[a-z0-9-]+\\.html',actual[name]))
+            new_links=set(re.findall(r'(?:ri|rb)-[0-9]{3}-[a-z0-9-]+\\.html',result[name]))
+            self.assertTrue(old_links.issubset(new_links),name)
+        ET.fromstring(result["feed.xml"])
+        ET.fromstring(result["sitemap.xml"])
+
     def test_second_application_never_duplicates(self):
         once=compose_site_updates(self.existing,self.article)
         with self.assertRaisesRegex(ValueError,"ARTICLE_ALREADY_INDEXED"):
