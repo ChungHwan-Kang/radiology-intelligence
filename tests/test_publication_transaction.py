@@ -1,7 +1,7 @@
 import hashlib,json,tempfile,unittest,sys
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/"scripts"))
-from publication_transaction import plan_publish
+from publication_transaction import plan_publish,prepare_github_sha_lease
 
 class PublicationTransactionTests(unittest.TestCase):
     def setUp(self):
@@ -28,6 +28,38 @@ class PublicationTransactionTests(unittest.TestCase):
     def approved(self):
         self.state.update(state="APPROVED_FOR_PUBLISH",approval_sha256=self.sha)
         self.save()
+    def test_optimistic_sha_lease_for_fresh_approved_plan(self):
+        self.approved()
+        plan=plan_publish(self.root,"RI-999")
+        remote={p:("a"*40) for p in plan["required_targets"]}
+        remote["posts/"+self.article["slug"]]=None
+        lease=prepare_github_sha_lease(plan,remote)
+        self.assertTrue(lease["remote_shas_must_be_revalidated_immediately_before_each_write"])
+        self.assertTrue(lease["approved_noindex_preview_must_not_be_published"])
+        self.assertFalse(lease["public_write_performed"])
+
+    def test_sha_lease_rejects_existing_article(self):
+        self.approved()
+        plan=plan_publish(self.root,"RI-999")
+        remote={p:("a"*40) for p in plan["required_targets"]}
+        with self.assertRaisesRegex(ValueError,"ARTICLE_ALREADY_EXISTS_REMOTE"):
+            prepare_github_sha_lease(plan,remote)
+
+    def test_sha_lease_rejects_missing_remote_files(self):
+        self.approved()
+        plan=plan_publish(self.root,"RI-999")
+        with self.assertRaisesRegex(ValueError,"INCOMPLETE_REMOTE_SHA_SNAPSHOT"):
+            prepare_github_sha_lease(plan,{})
+
+    def test_sha_lease_rejects_invalid_existing_sha(self):
+        self.approved()
+        plan=plan_publish(self.root,"RI-999")
+        remote={p:("a"*40) for p in plan["required_targets"]}
+        remote["posts/"+self.article["slug"]]=None
+        remote["index.html"]="not-a-sha"
+        with self.assertRaisesRegex(ValueError,"INVALID_REMOTE_SHA"):
+            prepare_github_sha_lease(plan,remote)
+
     def test_missing_approval(self):
         with self.assertRaisesRegex(ValueError,"ARTICLE_SPECIFIC_APPROVAL_REQUIRED"):
             plan_publish(self.root,"RI-999")
