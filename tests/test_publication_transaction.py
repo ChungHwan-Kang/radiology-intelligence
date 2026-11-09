@@ -1,7 +1,7 @@
 import hashlib,json,tempfile,unittest,sys
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/"scripts"))
-from publication_transaction import plan_publish,prepare_github_sha_lease,render_approved_public_html
+from publication_transaction import plan_publish,prepare_github_sha_lease,render_approved_public_html,prepare_approved_site_bundle
 from private_editorial_gate import preview
 
 class PublicationTransactionTests(unittest.TestCase):
@@ -113,6 +113,32 @@ class PublicationTransactionTests(unittest.TestCase):
         self.save()
         with self.assertRaisesRegex(ValueError,"UNEXPECTED_APPROVED_PREVIEW_STRUCTURE"):
             render_approved_public_html(self.root,"RI-999","2026-11-09")
+
+    def test_approved_site_bundle_uses_real_existing_site_sources_without_writes(self):
+        self.make_full_approved_preview()
+        repo=Path(__file__).resolve().parents[1]
+        current={name:(repo/name).read_text(encoding="utf-8") for name in
+                 ("index.html","categories.html","feed.xml","sitemap.xml")}
+        bundle=prepare_approved_site_bundle(
+            self.root,"RI-999","2026-11-09T10:00:00+09:00",current)
+        self.assertEqual(len(bundle["contents"]),5)
+        self.assertIn("posts/ri-999-synthetic.html",bundle["contents"])
+        self.assertTrue(bundle["contents"]["index.html"].startswith(current["index.html"][:200]))
+        self.assertIn("ri-030-li-rads-threshold-growth-10mm-ipd-meta-analysis.html",
+                      bundle["contents"]["feed.xml"])
+        self.assertEqual(bundle["status"],"APPROVED_SITE_PAYLOAD_READY_NOT_PUBLISHED")
+        self.assertFalse(bundle["public_write_performed"])
+        self.assertFalse(bundle["external_sync_performed"])
+        for target,body in bundle["contents"].items():
+            self.assertEqual(bundle["sha256"][target],
+                             hashlib.sha256(body.encode("utf-8")).hexdigest())
+
+    def test_approved_site_bundle_rejects_pending_approval(self):
+        self.make_full_approved_preview()
+        self.state["state"]="APPROVAL_PENDING"
+        self.save()
+        with self.assertRaisesRegex(ValueError,"ARTICLE_SPECIFIC_APPROVAL_REQUIRED"):
+            prepare_approved_site_bundle(self.root,"RI-999","2026-11-09T10:00:00+09:00",{})
 
     def test_missing_approval(self):
         with self.assertRaisesRegex(ValueError,"ARTICLE_SPECIFIC_APPROVAL_REQUIRED"):
