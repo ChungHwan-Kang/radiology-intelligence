@@ -106,7 +106,7 @@ class ConnectedPreflightTests(unittest.TestCase):
         self.adapter.site["posts/ri-999-only-synthetic.html"]="existing"
         with self.assertRaisesRegex(ValueError,"ARTICLE_ALREADY_EXISTS_REMOTE"):
             self.execute()
-        self.assertTrue(all(c[0]!="write" for c in self.adapter.calls)
+        self.assertTrue(all(c[0]!="write" for c in self.adapter.calls))
 
 
 if __name__=="__main__":
