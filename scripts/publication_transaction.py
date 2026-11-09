@@ -36,8 +36,24 @@ def plan_publish(private_root,article_id,published_dois=(),published_ids=(),exis
         raise ValueError("ALREADY_PUBLISHED_OR_DUPLICATE")
     if b'content="noindex,nofollow"' not in page:
         raise ValueError("PREVIEW_IS_NOT_PRIVATE")
-    if not source.get("source_verification",{}).get("original_methods_results"):
+    verification=source.get("source_verification")
+    if not isinstance(verification,dict) or verification.get("original_methods_results") is not True:
         raise ValueError("SOURCE_VERIFICATION_NOT_RECORDED")
+    if verification.get("quantitative_claims") is not True:
+        raise ValueError("QUANTITATIVE_CLAIMS_NOT_VERIFIED")
+    if verification.get("supplement") not in ("VERIFIED","NOT_APPLICABLE","UNAVAILABLE_DISCLOSED"):
+        raise ValueError("SUPPLEMENT_STATUS_UNRESOLVED")
+    if not isinstance(verification.get("source_url"),str) or not verification["source_url"].startswith("https://"):
+        raise ValueError("PRIMARY_SOURCE_URL_MISSING")
+    claims=source.get("claims")
+    if not isinstance(claims,list) or not claims or not all(
+        isinstance(item,dict) and item.get("verified") is True
+        and isinstance(item.get("primary_source_location"),str)
+        and item["primary_source_location"].strip()
+        and isinstance(item.get("claim"),str) and item["claim"].strip()
+        for item in claims
+    ):
+        raise ValueError("CLAIM_PROVENANCE_INCOMPLETE")
     return {"status":"READY_FOR_AUTHORIZED_DISPATCH","article_id":article_id,"doi":doi,
             "approved_sha256":sha,"slug":source["slug"],"url":POSTBASE+source["slug"],
             "required_targets":[s.format(slug=source["slug"]) for s in TARGETS],
