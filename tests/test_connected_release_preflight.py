@@ -6,7 +6,7 @@ from pathlib import Path
 import sys
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/"scripts"))
 
-from connected_release_preflight import prepare_connected_github_release, INDEX_PATHS
+from connected_release_preflight import prepare_connected_github_release, prepare_connected_release_from_native_sheets, INDEX_PATHS
 from private_editorial_gate import preview
 
 
@@ -73,6 +73,31 @@ class ConnectedPreflightTests(unittest.TestCase):
         return prepare_connected_github_release(
             self.root,"RI-999","2026-11-09T10:00:00+09:00",self.adapter,
             published_dois=dois,published_ids=ids)
+    def test_native_sheet_duplicate_guard_connected_to_approved_preflight(self):
+        m=["x"+str(i) for i in range(26)]
+        for name,i in (("ID",0),("DOI",10),("Content Stage",14)): m[i]=name
+        w=["x"+str(i) for i in range(19)]
+        for name,i in (("DOI",4),("RI Article Candidate",14),("Priority",15),
+                       ("Existing Master ID",16)): w[i]=name
+        master=[m,["RI-030"]+[""]*25]
+        watch=[w,[""]*4+["10.1000/synthetic-code-test"]+[""]*9+
+               ["YES","HIGH","","Indexed","2026-11-09"]]
+        r=prepare_connected_release_from_native_sheets(
+            self.root,"RI-999","2026-11-09T10:00:00+09:00",self.adapter,
+            master,watch,"1ZcyBs9Bpk7QURErOx5RVrucc-GcL9BlGyPmeR168YgM",
+            {"Master_Index":"A1:Z1026","MRI_Research_Watch":"A1:S1000"})
+        self.assertEqual(r["native_sheets_duplicate_guard"]["matching_watch_doi_rows"],1)
+        self.assertEqual(r["status"],"CONNECTED_GITHUB_READONLY_PREFLIGHT_READY")
+        self.assertFalse(r["ready_for_unattended_publication"])
+        self.assertFalse(r["public_write_performed"])
+        self.assertEqual(len(r["bundle"]["contents"]),5)
+        master[1][10]="10.1000/synthetic-code-test"
+        with self.assertRaisesRegex(ValueError,"ALREADY_IN_MASTER_DOI"):
+            prepare_connected_release_from_native_sheets(
+                self.root,"RI-999","2026-11-09T10:00:00+09:00",self.adapter,
+                master,watch,"1ZcyBs9Bpk7QURErOx5RVrucc-GcL9BlGyPmeR168YgM",
+                {"Master_Index":"A1:Z1026","MRI_Research_Watch":"A1:S1000"})
+
     def test_real_repo_baseline_produces_five_file_readonly_plan(self):
         result=self.execute()
         self.assertEqual(result["status"],"CONNECTED_GITHUB_READONLY_PREFLIGHT_READY")
