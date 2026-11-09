@@ -77,6 +77,23 @@ class DispatchTests(unittest.TestCase):
         self.assertEqual([x[0] for x in self.git.calls[:5]],["read"]*5)
         self.assertFalse(r["publication_complete"])
         self.assertEqual(r["external_system_sync"],"PENDING_SHEETS_DRIVE_NOTION")
+    def test_ambiguous_api_exception_is_partial_and_requires_reconciliation(self):
+        original=self.git.write
+        def ambiguous_write(path,content,sha):
+            if path=="index.html":
+                # Emulates a GitHub write being committed before lost response.
+                original(path,content,sha)
+                raise ConnectionError("response lost")
+            return original(path,content,sha)
+        self.git.write=ambiguous_write
+        result=self.run_dispatch()
+        self.assertEqual(result["state"],"PARTIAL_WRITE_OUTCOME_UNKNOWN")
+        self.assertEqual(result["blocker"],"index.html")
+        self.assertEqual(result["recovery_action"],"REFETCH_REMOTE_AND_RECONCILE_BEFORE_RETRY")
+        self.assertEqual(len(result["writes"]),1)
+        self.assertFalse(result["publication_complete"])
+        self.assertNotIn(("write","categories.html"),self.git.calls)
+
     def test_readback_mismatch_is_partial_not_published(self):
         original=self.git.read_content
         def bad(path):
