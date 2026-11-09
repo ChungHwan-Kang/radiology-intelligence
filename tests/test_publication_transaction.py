@@ -65,7 +65,7 @@ class PublicationTransactionTests(unittest.TestCase):
         self.article.update(
             title="Synthetic MRI article",subtitle="Synthetic test",
             summary="Synthetic study for code tests.",
-            categories=["MRI"],
+            categories=["MRI 검사와 기술"],
             sections=[{"heading":"Source Fact","text":"Test methods"},
                       {"heading":"Practical Implication","text":"No clinical claim"}],
             takeaway="Test only."
