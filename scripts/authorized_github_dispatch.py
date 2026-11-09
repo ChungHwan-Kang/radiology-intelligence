@@ -78,12 +78,21 @@ def dispatch_github_approved(plan, lease, rendered, contents, adapter, approval_
             return report
     for path in paths:
         expected=lease_shas[path]
-        result_sha=adapter.write(path,contents[path],expected)
-        if not isinstance(result_sha,str) or len(result_sha)!=40:
-            raise DispatchBlocked("WRITE_RECEIPT_NOT_SHA:"+path)
-        observed_content=adapter.read_content(path)
+        try:
+            result_sha=adapter.write(path,contents[path],expected)
+            if not isinstance(result_sha,str) or len(result_sha)!=40:
+                raise DispatchBlocked("WRITE_RECEIPT_NOT_SHA:"+path)
+            observed_content=adapter.read_content(path)
+        except Exception as exc:
+            # The remote may have committed before a response was lost.
+            # Never retry automatically, since doing so can duplicate writes.
+            report.update(state="PARTIAL_WRITE_OUTCOME_UNKNOWN",blocker=path,
+                          recovery_action="REFETCH_REMOTE_AND_RECONCILE_BEFORE_RETRY",
+                          error_type=type(exc).__name__)
+            return report
         if _digest(observed_content)!=_digest(contents[path]):
-            report.update(state="PARTIAL_READBACK_MISMATCH",blocker=path)
+            report.update(state="PARTIAL_READBACK_MISMATCH",blocker=path,
+                          recovery_action="REFETCH_REMOTE_AND_RECONCILE_BEFORE_RETRY")
             return report
         report["writes"].append({"path":path,"returned_blob_sha":result_sha,
                                 "readback_sha256":_digest(observed_content)})
