@@ -24,6 +24,8 @@ on:
       - 'tests/test_publication_transaction.py'
       - 'tests/test_sheets_bridge.py'
       - 'scripts/publication_transaction.py'
+      - 'scripts/publication_release_journal.py'
+      - 'tests/test_publication_release_journal.py'
       - 'scripts/sheets_bridge.py'
       - 'tests/test_private_editorial_gate.py'
       - 'tests/test_editorial_queue.py'
