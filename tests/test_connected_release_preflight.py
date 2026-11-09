@@ -6,7 +6,7 @@ from pathlib import Path
 import sys
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/"scripts"))
 
-from connected_release_preflight import prepare_connected_github_release, prepare_connected_release_from_native_sheets, INDEX_PATHS
+from connected_release_preflight import prepare_connected_github_release, prepare_connected_release_from_native_sheets, prepare_release_with_provider_reads, INDEX_PATHS
 from private_editorial_gate import preview
 
 
@@ -97,6 +97,36 @@ class ConnectedPreflightTests(unittest.TestCase):
                 self.root,"RI-999","2026-11-09T10:00:00+09:00",self.adapter,
                 master,watch,"1ZcyBs9Bpk7QURErOx5RVrucc-GcL9BlGyPmeR168YgM",
                 {"Master_Index":"A1:Z1026","MRI_Research_Watch":"A1:S1000"})
+
+    def test_provider_read_twice_is_linked_to_approved_no_write_release(self):
+        from native_sheets_reader import NativeSheetsReader, SHEET_ID, SHEET_IDS
+        from urllib.parse import unquote, urlsplit
+        m=["x"+str(i) for i in range(26)]
+        for name,i in (("ID",0),("DOI",10),("Content Stage",14)): m[i]=name
+        w=["x"+str(i) for i in range(19)]
+        for name,i in (("DOI",4),("RI Article Candidate",14),("Priority",15),("Existing Master ID",16)): w[i]=name
+        values={"Master_Index":[m,["RI-030"]+[""]*25],
+                "MRI_Research_Watch":[w,[""]*4+["10.1000/synthetic-code-test"]+
+                                      [""]*9+["YES","HIGH","","Indexed","2026-11-09"]]}
+        calls=[]
+        def provider(url):
+            calls.append(url)
+            if "/values/" not in url:
+                return 200,{"spreadsheetId":SHEET_ID,"sheets":[{"properties":{
+                    "title":name,"sheetId":sid}} for name,sid in SHEET_IDS.items()]}
+            a1=unquote(urlsplit(url).path.split("/values/",1)[1])
+            name,range_string=a1.split("!",1)
+            return 200,{"range":a1,"majorDimension":"ROWS","values":values[name]}
+        result=prepare_release_with_provider_reads(
+            self.root,"RI-999","2026-11-09T10:00:00+09:00",
+            self.adapter,NativeSheetsReader(provider))
+        self.assertEqual(result["status"],"CONNECTED_GITHUB_READONLY_PREFLIGHT_READY")
+        self.assertEqual(len(calls),10)
+        self.assertEqual(len(result["bundle"]["contents"]),5)
+        self.assertEqual(result["native_provider_read_receipt"]["status"],"NATIVE_PROVIDER_READ_TWICE_CONSISTENT")
+        self.assertFalse(result["ready_for_unattended_publication"])
+        self.assertFalse(result["public_write_performed"])
+        self.assertTrue(all(c[0]!="write" for c in self.adapter.calls))
 
     def test_real_repo_baseline_produces_five_file_readonly_plan(self):
         result=self.execute()
