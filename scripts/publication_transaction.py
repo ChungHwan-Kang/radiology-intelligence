@@ -62,6 +62,41 @@ def plan_publish(private_root,article_id,published_dois=(),published_ids=(),exis
             "postconditions":["github_file_readbacks","sheets_rows_readback","drive_copy_readback","rss_and_sitemap_valid","live_url_http_200_and_html_render"],
             "public_write_performed":False,"auto_publish_enabled":False}
 
+def prepare_github_sha_lease(plan, remote_targets):
+    """Build a non-publishing optimistic-lock lease from fresh remote SHA reads.
+
+    The authorized dispatcher must recheck every SHA at write time. This
+    structure is never proof that a remote write was performed.
+    """
+    if not isinstance(plan,dict) or plan.get("status")!="READY_FOR_AUTHORIZED_DISPATCH":
+        raise ValueError("APPROVED_PUBLISH_PLAN_REQUIRED")
+    expected=plan.get("required_targets")
+    if not isinstance(expected,list) or len(expected)!=len(TARGETS) or len(set(expected))!=len(expected):
+        raise ValueError("INVALID_PUBLISH_TARGETS")
+    if not isinstance(remote_targets,dict) or set(remote_targets)!=set(expected):
+        raise ValueError("INCOMPLETE_REMOTE_SHA_SNAPSHOT")
+    created=f"posts/{plan.get('slug','')}"
+    if created not in remote_targets:
+        raise ValueError("ARTICLE_TARGET_NOT_IN_SNAPSHOT")
+    if remote_targets[created] is not None:
+        raise ValueError("ARTICLE_ALREADY_EXISTS_REMOTE")
+    for path in expected:
+        if path==created: continue
+        sha=remote_targets[path]
+        if not isinstance(sha,str) or not re.fullmatch(r"[a-f0-9]{40}",sha):
+            raise ValueError("INVALID_REMOTE_SHA:"+path)
+    return {
+        "status":"READY_FOR_CONDITIONAL_WRITE_PRECHECK",
+        "article_id":plan["article_id"],
+        "approved_sha256":plan["approved_sha256"],
+        "remote_sha_expectations":dict(remote_targets),
+        "remote_shas_must_be_revalidated_immediately_before_each_write":True,
+        "requires_independent_public_html_render":True,
+        "approved_noindex_preview_must_not_be_published":True,
+        "public_write_performed":False
+    }
+
+
 def main():
     p=argparse.ArgumentParser()
     p.add_argument("--private-dir",type=Path,required=True)
