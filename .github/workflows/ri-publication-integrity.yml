@@ -29,6 +29,8 @@ on:
       - 'scripts/github_contents_adapter.py'
       - 'scripts/connected_release_preflight.py'
       - 'scripts/native_sheets_duplicate_guard.py'
+      - 'scripts/native_sheets_reader.py'
+      - 'tests/test_native_sheets_reader.py'
       - 'tests/test_native_sheets_duplicate_guard.py'
       - 'tests/test_connected_release_preflight.py'
       - 'tests/test_github_contents_adapter.py'
