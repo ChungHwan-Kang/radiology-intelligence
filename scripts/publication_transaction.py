@@ -150,6 +150,49 @@ def render_approved_public_html(private_root, article_id, published_date):
     }
 
 
+def prepare_approved_site_bundle(private_root, article_id, published_at, current_site):
+    """Bind approved article bytes to four additive index updates, no writes.
+
+    Caller must separately fetch fresh remote file versions, acquire SHA lease,
+    authorize the article-specific release and execute conditional writes.
+    """
+    from datetime import datetime
+    from publication_site_composer import compose_site_updates
+    try:
+        moment=datetime.fromisoformat(published_at)
+        if moment.tzinfo is None or moment.utcoffset() is None:
+            raise ValueError("PUBLICATION_OFFSET_REQUIRED")
+    except (TypeError,ValueError,AttributeError) as exc:
+        raise ValueError("INVALID_PUBLICATION_DATETIME") from exc
+    plan=plan_publish(private_root,article_id)
+    page=render_approved_public_html(private_root,article_id,moment.date().isoformat())
+    article=json.loads((private_root.resolve()/article_id/"article.json").read_text(encoding="utf-8"))
+    metadata={
+        "slug":article["slug"],
+        "title":article["title"],
+        "summary":article["summary"],
+        "categories":article["categories"],
+        "published_at":published_at
+    }
+    indexes=compose_site_updates(current_site,metadata)
+    paths=plan["required_targets"]
+    if paths != ["posts/"+article["slug"],"index.html","categories.html","feed.xml","sitemap.xml"]:
+        raise ValueError("INVALID_APPROVED_TARGET_ORDER")
+    payload={"posts/"+article["slug"]:page["html"],**indexes}
+    if set(payload)!=set(paths):
+        raise ValueError("INCOMPLETE_APPROVED_BUNDLE")
+    return {
+        "status":"APPROVED_SITE_PAYLOAD_READY_NOT_PUBLISHED",
+        "plan":plan,
+        "rendered":page,
+        "contents":payload,
+        "sha256":{name:hashlib.sha256(body.encode("utf-8")).hexdigest()
+                  for name,body in payload.items()},
+        "public_write_performed":False,
+        "external_sync_performed":False
+    }
+
+
 def main():
     p=argparse.ArgumentParser()
     p.add_argument("--private-dir",type=Path,required=True)
