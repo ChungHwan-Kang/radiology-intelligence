@@ -97,6 +97,59 @@ def prepare_github_sha_lease(plan, remote_targets):
     }
 
 
+def render_approved_public_html(private_root, article_id, published_date):
+    """Return unpublished UTF-8 HTML derived solely from the locked preview.
+
+    Never writes GitHub or Google. The approved private source and HTML hashes
+    are rechecked by plan_publish before the limited metadata transformation.
+    """
+    from datetime import date
+    from html.parser import HTMLParser
+    from private_editorial_gate import BASE
+
+    try:
+        if date.fromisoformat(published_date).isoformat()!=published_date:
+            raise ValueError("INVALID_PUBLICATION_DATE")
+    except (TypeError, ValueError):
+        raise ValueError("INVALID_PUBLICATION_DATE")
+    plan=plan_publish(private_root,article_id)
+    page=(private_root.resolve()/article_id/"review.html").read_text(encoding="utf-8")
+    source=json.loads((private_root.resolve()/article_id/"article.json").read_text(encoding="utf-8"))
+    replacements=(
+        ('<meta name="robots" content="noindex,nofollow">',''),
+        ('<title>[비공개 검토] ','<title>'),
+        ('<div class="article-meta">비공개 검토 · 발행일 승인 후 확정</div>',
+         '<div class="article-meta">발행일 '+published_date+'</div>')
+    )
+    for before,after in replacements:
+        if page.count(before)!=1:
+            raise ValueError("UNEXPECTED_APPROVED_PREVIEW_STRUCTURE")
+        page=page.replace(before,after,1)
+    if "noindex" in page.lower() or "[비공개 검토]" in page or "발행일 승인 후 확정" in page:
+        raise ValueError("PRIVATE_PREVIEW_MARKER_REMAINS")
+    # Check post conversion with the same metadata parser as production QA.
+    from verify_publication import ArticleParser
+    parser=ArticleParser()
+    parser.feed(page)
+    expected=BASE+"posts/"+source["slug"]
+    if parser.h1!=1 or parser.canonical!=[expected] or parser.jsonld<1:
+        raise ValueError("PUBLIC_HTML_METADATA_INVALID")
+    for required in ("article-category","article-subtitle","article-meta","article-summary","takeaway","sources"):
+        if required not in parser.classes:
+            raise ValueError("PUBLIC_HTML_SECTION_MISSING:"+required)
+    return {
+        "status":"PUBLIC_HTML_RENDERED_NOT_PUBLISHED",
+        "article_id":article_id,
+        "slug":source["slug"],
+        "published_date":published_date,
+        "approved_private_sha256":plan["approved_sha256"],
+        "public_html_sha256":hashlib.sha256(page.encode("utf-8")).hexdigest(),
+        "html":page,
+        "public_write_performed":False,
+        "dispatch_authorized_by_renderer":False
+    }
+
+
 def main():
     p=argparse.ArgumentParser()
     p.add_argument("--private-dir",type=Path,required=True)
