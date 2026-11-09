@@ -14,6 +14,38 @@ from publication_transaction import (
 INDEX_PATHS=("index.html","categories.html","feed.xml","sitemap.xml")
 
 
+def prepare_release_with_provider_reads(
+        private_root,article_id,published_at,github_adapter,sheets_reader):
+    """Live double-read data gate plus GitHub no-write preparation.
+
+    Provider read provenance is the actual reader method invocation in this
+    process. External Google access token and connected GitHub authentication
+    remain the transports' responsibility. Never authorizes public writes.
+    """
+    from native_sheets_reader import NativeSheetsReader
+    if not isinstance(sheets_reader,NativeSheetsReader):
+        raise ValueError("NATIVE_SHEETS_READER_REQUIRED")
+    initial=sheets_reader.read()
+    result=prepare_connected_release_from_native_sheets(
+        private_root,article_id,published_at,github_adapter,
+        initial["values"]["Master_Index"],
+        initial["values"]["MRI_Research_Watch"],
+        initial["spreadsheet_id"],initial["read_ranges"])
+    confirm=sheets_reader.read()
+    if initial["sha256"]!=confirm["sha256"] or initial["tab_ids"]!=confirm["tab_ids"]:
+        raise ValueError("NATIVE_SHEETS_CHANGED_DURING_PREFLIGHT")
+    result["native_provider_read_receipt"]={
+        "status":confirm["status"],
+        "spreadsheet_id":confirm["spreadsheet_id"],
+        "tab_ids":confirm["tab_ids"],
+        "ranges":confirm["read_ranges"],
+        "sha256":confirm["sha256"],
+        "read_is_not_release_time_lease":True}
+    result["ready_for_unattended_publication"]=False
+    result["public_write_performed"]=False
+    return result
+
+
 def prepare_connected_release_from_native_sheets(
         private_root, article_id, published_at, adapter,
         master_values, watch_values, spreadsheet_id, read_ranges):
