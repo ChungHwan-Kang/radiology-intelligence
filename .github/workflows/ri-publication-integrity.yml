@@ -26,6 +26,8 @@ on:
       - 'scripts/publication_transaction.py'
       - 'scripts/publication_release_journal.py'
       - 'scripts/authorized_github_dispatch.py'
+      - 'scripts/github_contents_adapter.py'
+      - 'tests/test_github_contents_adapter.py'
       - 'scripts/publication_site_composer.py'
       - 'tests/test_publication_site_composer.py'
       - 'tests/test_authorized_github_dispatch.py'
