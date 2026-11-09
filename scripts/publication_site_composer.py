@@ -73,7 +73,7 @@ def compose_site_updates(existing, article):
     count=re.search(r'<span>현재 공개된 해설 (\d+)건</span>',index)
     _require(count is not None and index.count(count.group(0))==1,"HOME_COUNT_ANCHOR_CHANGED")
     index=index.replace(count.group(0),f'<span>현재 공개된 해설 {int(count.group(1))+1}건</span>',1)
-    anchors=list(re.finditer(r'(?m)^[ \\t]*<div class="article-list">\\n',index))
+    anchors=list(re.finditer(r'(?m)^[ \t]*<div class="article-list">\n',index))
     _require(len(anchors)==1,"HOME_ARTICLE_LIST_ANCHOR_CHANGED")
     anchor=anchors[0].group(0)
     newrow=(f'        <a class="article-row" href="{href}"><div>'
