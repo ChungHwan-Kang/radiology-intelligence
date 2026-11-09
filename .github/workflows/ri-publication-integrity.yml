@@ -26,6 +26,8 @@ on:
       - 'scripts/publication_transaction.py'
       - 'scripts/publication_release_journal.py'
       - 'scripts/authorized_github_dispatch.py'
+      - 'scripts/github_release_reconciler.py'
+      - 'tests/test_github_release_reconciler.py'
       - 'scripts/github_contents_adapter.py'
       - 'scripts/connected_release_preflight.py'
       - 'scripts/native_sheets_duplicate_guard.py'
