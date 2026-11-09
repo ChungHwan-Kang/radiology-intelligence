@@ -55,7 +55,8 @@ class SiteComposerTests(unittest.TestCase):
         self.assertEqual(self.existing["index.html"].count("ri-999"),0)
     def test_duplicate_link_fails_closed_without_mutating_input(self):
         before=dict(self.existing)
-        self.existing["feed.xml"]+=self.article["slug"]
+        self.existing["feed.xml"]=self.existing["feed.xml"].replace("</channel>",
+            "<!-- "+self.article["slug"]+" -->"+"</channel>")
         with self.assertRaisesRegex(ValueError,"ARTICLE_ALREADY_INDEXED:feed.xml"):
             compose_site_updates(self.existing,self.article)
         self.assertEqual(before["index.html"],self.existing["index.html"])
