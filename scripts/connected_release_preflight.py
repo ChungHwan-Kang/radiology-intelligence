@@ -14,6 +14,30 @@ from publication_transaction import (
 INDEX_PATHS=("index.html","categories.html","feed.xml","sitemap.xml")
 
 
+def prepare_connected_release_from_native_sheets(
+        private_root, article_id, published_at, adapter,
+        master_values, watch_values, spreadsheet_id, read_ranges):
+    """Bind provider-native row data to the approved no-write GitHub preflight.
+
+    This wrapper checks the actual values supplied by a connector caller;
+    it cannot authenticate the source of an in-memory array.
+    """
+    from native_sheets_duplicate_guard import build_native_duplicate_guard
+    plan=plan_publish(private_root,article_id)
+    checked=build_native_duplicate_guard(
+        master_values,watch_values,article_id,plan["doi"],
+        spreadsheet_id=spreadsheet_id,read_ranges=read_ranges)
+    prepared=prepare_connected_github_release(
+        private_root,article_id,published_at,adapter,
+        published_dois=(),published_ids=())
+    if prepared["plan"]["doi"]!=checked["doi"]:
+        raise ValueError("NATIVE_SHEET_DOI_PREFLIGHT_MISMATCH")
+    prepared["native_sheets_duplicate_guard"]=checked
+    prepared["duplicate_guard_source"]="NATIVE_VALUES_CALLER_SUPPLIED_NOT_PROVIDER_ATTESTED"
+    prepared["ready_for_unattended_publication"]=False
+    return prepared
+
+
 def prepare_connected_github_release(private_root, article_id, published_at,
                                      adapter, published_dois, published_ids):
     """Fetch fresh GitHub objects, then build a private, no-write 5-file plan.
