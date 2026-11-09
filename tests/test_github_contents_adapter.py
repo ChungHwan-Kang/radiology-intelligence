@@ -10,7 +10,7 @@ from github_contents_adapter import GitHubContentsAdapter,GitHubContentsError,bu
 
 def blob_sha(data):
     raw=data.encode("utf-8")
-    return hashlib.sha1(b"blob "+str(len(raw)).encode()+b"\\0"+raw).hexdigest()
+    return hashlib.sha1(b"blob "+str(len(raw)).encode()+b"\0"+raw).hexdigest()
 
 
 class FakeContentsAPI:
@@ -45,6 +45,9 @@ class GitHubAdapterTests(unittest.TestCase):
     def setUp(self):
         self.api=FakeContentsAPI()
         self.adapter=GitHubContentsAdapter("ChungHwan-Kang/radiology-intelligence","main",self.api)
+    def test_git_blob_sha_matches_known_git_object(self):
+        self.assertEqual(blob_sha("hello\\n"),"ce013625030ba8dba906f756967f9e9ca394464a")
+
     def test_real_contents_schema_reads_sha_and_utf8(self):
         self.assertEqual(self.adapter.read("index.html"),blob_sha("Original published index"))
         self.assertEqual(self.adapter.read_content("index.html"),"Original published index")
