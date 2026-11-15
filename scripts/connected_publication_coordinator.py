@@ -150,6 +150,13 @@ def run_approved_connected_release(prepared, github_adapter, authorization,
             raise ValueError("PROVIDER_READ_WRITE_CAPABILITIES_NOT_READY")
         if set(readiness.get("components", [])) != set(RECORD_COMPONENTS):
             raise ValueError("PROVIDER_COMPONENT_SET_INCOMPLETE")
+        # A GET-only provider must never authorize irreversible GitHub writes.
+        # Provider capability is established separately by an authorized
+        # operator/runner and must be proven rather than inferred from GETs.
+        if readiness.get("actual_write_scopes_verified") is not True:
+            raise ValueError("PROVIDER_WRITE_SCOPES_NOT_VERIFIED")
+        if readiness.get("caller_single_writer_lease_attested") is not True:
+            raise ValueError("PROVIDER_SINGLE_WRITER_LOCK_NOT_ATTESTED")
         for component in RECORD_COMPONENTS:
             expected = _record(prepared, component)
             observed = _validate_read(
