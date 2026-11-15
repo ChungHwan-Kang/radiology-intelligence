@@ -198,6 +198,26 @@ class NativeAdapterTests(unittest.TestCase):
                           "www.googleapis.com","api.notion.com"])
         self.assertEqual(seen[-1][2],"2022-06-28")
 
+    def test_mismatched_target_url_fails_before_writing(self):
+        mismatched=record("sheets_master")
+        mismatched["published_url"]="https://example.org/other"
+        with self.assertRaisesRegex(p.ProviderBlocked,"RELEASE_TARGET_METADATA_MISMATCH"):
+            self.adapter.create("sheets_master",mismatched)
+        self.assertFalse(self.api.writes)
+
+    def test_doi_url_normalization_prevents_duplicate(self):
+        self.api.master.append([""]*26)
+        self.api.master[-1][0]="RI-124"
+        self.api.master[-1][10]="https://doi.org/10.1000/synthetic"
+        with self.assertRaisesRegex(p.ProviderBlocked,"MASTER_DOI_ALREADY_OWNED"):
+            self.adapter.read("sheets_master","RI-999")
+
+    def test_invalid_approval_sha_refused(self):
+        mismatched=record("sheets_master")
+        mismatched["approved_private_sha256"]="invalid"
+        with self.assertRaisesRegex(p.ProviderBlocked,"INVALID_APPROVAL_DIGEST"):
+            self.adapter.create("sheets_master",mismatched)
+
     def test_published_html_hash_lock(self):
         wrong=record("sheets_master")
         wrong["published_html_sha256"]="0"*64
