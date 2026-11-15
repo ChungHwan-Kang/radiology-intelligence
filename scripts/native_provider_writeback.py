@@ -18,7 +18,7 @@ import json
 import re
 from urllib.error import HTTPError
 from urllib.parse import quote, urlencode
-from urllib.request import Request, urlopen
+from urllib.request import Request, HTTPRedirectHandler, build_opener
 
 from connected_publication_coordinator import RECORD_COMPONENTS
 from native_sheets_duplicate_guard import norm_doi
@@ -95,8 +95,12 @@ class NativeHTTP:
     @staticmethod
     def _request(method, url, headers, body):
         request = Request(url, data=body, method=method, headers=headers)
+        class NoCrossHostRedirect(HTTPRedirectHandler):
+            def redirect_request(self, req, fp, code, msg, newurl):
+                # Prevent leaking Google/Notion bearer tokens through redirects.
+                return None
         try:
-            with urlopen(request, timeout=25) as response:
+            with build_opener(NoCrossHostRedirect).open(request, timeout=25) as response:
                 payload=response.read()
                 content_type=response.headers.get("Content-Type","")
                 if "application/json" in content_type:
@@ -352,8 +356,12 @@ class NativeProviderAdapter:
             raise ProviderBlocked("SHEETS_CANONICAL_ID_MISMATCH")
         self._values("Master_Index",26)
         self._values("MRI_Research_Watch",19)
-        self.http.call("google","GET","/drive/v3/files/"+DRIVE_FOLDER+"?fields=id,mimeType")
-        self.http.call("google","GET","/docs/v1/documents/"+HANDOFF_DOC+"?fields=documentId,revisionId")
+        folder=self.http.call("google","GET","/drive/v3/files/"+DRIVE_FOLDER+"?fields=id,mimeType")
+        if folder.get("id")!=DRIVE_FOLDER or folder.get("mimeType")!="application/vnd.google-apps.folder":
+            raise ProviderBlocked("DRIVE_PUBLISHED_FOLDER_MISMATCH")
+        handoff=self.http.call("google","GET","/docs/v1/documents/"+HANDOFF_DOC+"?fields=documentId,revisionId")
+        if handoff.get("documentId")!=HANDOFF_DOC:
+            raise ProviderBlocked("HANDOFF_DOCUMENT_ID_MISMATCH")
         notion=self.http.call("notion","GET","/v1/pages/"+NOTION_PAGE)
         if str(notion.get("id","")).replace("-","")!=NOTION_PAGE.replace("-",""):
             raise ProviderBlocked("NOTION_PAGE_MISMATCH")
