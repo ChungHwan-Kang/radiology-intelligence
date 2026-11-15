@@ -21,6 +21,7 @@ from urllib.parse import quote, urlencode
 from urllib.request import Request, urlopen
 
 from connected_publication_coordinator import RECORD_COMPONENTS
+from native_sheets_duplicate_guard import norm_doi
 
 SHEET_ID = "1ZcyBs9Bpk7QURErOx5RVrucc-GcL9BlGyPmeR168YgM"
 MASTER_TAB = 2040869943
@@ -164,7 +165,7 @@ class NativeProviderAdapter:
         if not isinstance(article_metadata,dict) or not isinstance(approved_public_html,str):
             raise ProviderBlocked("APPROVED_SOURCE_METADATA_AND_HTML_REQUIRED")
         for key in ("article_id","doi","title","source","source_url","summary",
-                    "why_it_matters","published_date"):
+                    "why_it_matters","published_date","published_url","slug"):
             if not isinstance(article_metadata.get(key),str) or not article_metadata[key].strip():
                 raise ProviderBlocked("MISSING_CANONICAL_METADATA:"+key)
         if not re.fullmatch(r"RI-[0-9]{3}",article_metadata["article_id"]):
@@ -182,6 +183,11 @@ class NativeProviderAdapter:
             raise ProviderBlocked("ARTICLE_METADATA_DOI_MISMATCH")
         if record.get("component")!=component:
             raise ProviderBlocked("RELEASE_COMPONENT_MISMATCH")
+        if record.get("slug")!=self.metadata["slug"] or record.get("published_url")!=self.metadata["published_url"]:
+            raise ProviderBlocked("RELEASE_TARGET_METADATA_MISMATCH")
+        digest=record.get("approved_private_sha256")
+        if not isinstance(digest,str) or not re.fullmatch(r"[a-f0-9]{64}",digest):
+            raise ProviderBlocked("INVALID_APPROVAL_DIGEST")
         if record.get("published_html_sha256")!=hashlib.sha256(self.html.encode("utf-8")).hexdigest():
             raise ProviderBlocked("APPROVED_HTML_CONTENT_MISMATCH")
 
@@ -212,7 +218,9 @@ class NativeProviderAdapter:
     @staticmethod
     def _matching_rows(values, index, needle):
         return [(i,row) for i,row in enumerate(values[1:],2)
-                if len(row)>index and str(row[index]).strip().lower()==needle.lower()]
+                if len(row)>index and (
+                    norm_doi(row[index])==norm_doi(needle) if index in (4,10)
+                    else str(row[index]).strip().lower()==needle.lower())]
 
     def _master(self, article_id):
         values=self._values("Master_Index",26)
@@ -226,7 +234,7 @@ class NativeProviderAdapter:
         if not ids:
             return None
         i,row=ids[0]
-        if len(row)<=19 or row[10].lower()!=doi or row[14]!="Published" or row[19] != self.metadata["published_url"]:
+        if len(row)<=19 or norm_doi(row[10])!=norm_doi(doi) or row[14]!="Published" or row[19] != self.metadata["published_url"]:
             raise ProviderBlocked("MASTER_RECORD_CONFLICT")
         return {"record":_from_note(self._sheet_note("Master_Index",i)),
                 "revision":"row:"+str(i),"evidence_ref":"https://docs.google.com/spreadsheets/d/"+SHEET_ID+"/edit#gid="+str(MASTER_TAB)+"&range=A"+str(i)}
