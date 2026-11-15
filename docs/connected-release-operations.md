@@ -89,3 +89,69 @@ P-SMART DOI `10.1186/s13244-026-02459-2` is **private, no RI ID**.
 Its source QA note remains at
 `https://docs.google.com/document/d/1zgyxlxv_3jb_5tsrwvGPZKJInTrbGoiMacRw6FChzNY/edit`.
 Do not place its nonpublic body in this public GitHub repository.
+
+## 2026-11-15 follow-on: native provider adapters and private durable journal
+
+Development implementation:
+- `scripts/native_provider_writeback.py`: real HTTP endpoint mappings for
+  native Google Sheets, Drive upload/media, Docs and Notion block API. Accepts
+  **existing runtime-supplied** bearer tokens via `NativeHTTP`; it does not
+  perform OAuth, download credentials, install a runner or enable writes by
+  default. It verifies the canonical spreadsheet tab IDs and headers, exact
+  unique article ID/DOI, unique matching Watch DOI row, and exact approved
+  article+HTML identity. It stores the release receipt in native Google Sheets
+  **cell notes**, Google Drive file description/appProperties, a bounded Google
+  Docs appended paragraph and a Notion paragraph. Existing approved articles
+  and tab structures are not changed by this development code.
+- `scripts/durable_release_runner.py`: private-only, hash-chained JSONL ledger,
+  exclusive local article-ID lock and explicit `recover=True` after interrupted
+  attempts. No secrets, private article body or draft content in journal. The
+  local lock is not a cross-machine/ChatGPT-task transaction lock and cannot
+  exclude unrelated writers to the canonical Google Sheet.
+- `tests/test_native_provider_writeback.py` and
+  `tests/test_durable_release_runner.py`: synthetic-only native endpoint,
+  no-ID/no-approval, duplicate DOI, permissions, content/hash mismatch,
+  idempotence, timeout and explicit recovery checks. No real external writes.
+
+**Critical integration contract**: the actual `NativeProviderAdapter` must be
+constructed in a trustworthy *already-authorized* runner from approved
+article.json metadata and its precisely hash-locked public HTML, not scraped
+from a live article. It needs the existing Google/Notion access tokens with
+write scopes at runtime. A ChatGPT connector session is not equivalent to a
+token automatically available to Python or GitHub Actions. The execution
+runner must bind the receipt to the actual article approval event.
+
+**Hard safety gates**: `write_enabled=False` by default; no sole-writer lease
+means blocked; `run_durably` only proceeds with exact ID/hash approval token,
+creates a private journal outside Git and must be invoked by the approved
+operator. A stale article lock must be manually investigated. A Github post
+partial commit is reconciled by existing SHA lease logic; a Google/Notion
+partial commit is re-read before any new create. All remote modifications
+are intentionally DISALLOWED while PR #3 remains a draft.
+
+**Read-only connected account observations**:
+- Canonical Google Sheets: `Master_Index` 2040869943 / A:Z, and
+  `MRI_Research_Watch` 778410221 / A:S, verified with the connected
+  account (this is NOT runtime OAuth proof).
+- Google Drive `01_Blog` folder ID `1JUcX0CFQQ_58yfR_V421ZPCWKGlUBmC7`
+  confirmed as a folder; handoff Doc and P-SMART private Doc verified as
+  their own original files in distinct existing folders. No moves/copies.
+- Existing MRI Research Watch automation ID
+  `6a97a28a55988191875acaea93733ad7` confirmed enabled with
+  Asia/Seoul 07:10 daily recurrence. Its saved prompt already includes
+  approval handoff and continuous next-candidate selection. No duplicated
+  or modified schedule. However direct handoff from the task sandbox to this
+  Python runtime and real credential-bearing provider adapter is **NOT VERIFIED**.
+
+**Operational acceptance** remains PARTIAL until: (1) existing credential
+transfer pathway and scoped write capability are inspected/approved,
+(2) the sole-writer cross-client constraint and durable journal lifecycle
+are confirmed in the actual runner, (3) a private end-to-end attempt is
+observed with provider readbacks, (4) main-branch merge is approved, and
+(5) a separate explicitly approved real article is safely published and
+verified. No current P-SMART RI ID, approved HTML hash or publication consent.
+Hosted tests are a code regression signal, not proof of provider acceptance.
+
+Latest run: https://github.com/ChungHwan-Kang/radiology-intelligence/actions/runs/43705627943
+(214 tests OK, existing 34 Published source integrity checks PASS, on
+development branch; re-check after subsequent commits).
