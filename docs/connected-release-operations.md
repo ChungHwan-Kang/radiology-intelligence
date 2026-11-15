@@ -155,3 +155,51 @@ Hosted tests are a code regression signal, not proof of provider acceptance.
 Latest run: https://github.com/ChungHwan-Kang/radiology-intelligence/actions/runs/43705627943
 (214 tests OK, existing 34 Published source integrity checks PASS, on
 development branch; re-check after subsequent commits).
+
+## 2026-11-15 release-gate correction and real connected read-only preflight
+
+During production-readiness review, one unsafe state label was identified and
+corrected on the development branch. The provider adapter's original
+`assert_ready` returned `ALL_TARGETS_READ_WRITE_READY` after **GET only**,
+although `actual_write_scopes_verified=False`. The coordinator previously
+accepted the status without checking the false flag, so an explicitly approved
+article could advance to GitHub while external provider write permission was
+unknown. The corrected adapter reports
+`READ_ONLY_PREFLIGHT_PASS_WRITE_SCOPE_UNVERIFIED`; the coordinator requires
+explicitly proven `actual_write_scopes_verified=True` and
+`caller_single_writer_lease_attested=True` before attempting ANY GitHub write.
+This is a fail-closed safety fix, **not** proof that write scopes exist. Synthetic
+positive tests use explicit simulated attestations, and cannot promote the
+real adapter to operational write-readiness.
+
+Provider-native connected Sheets READ-ONLY results from the active ChatGPT
+connection on 2026-11-15:
+- Canonical spreadsheet ID and tab IDs confirmed, `Master_Index` A:Z,
+  `MRI_Research_Watch` A:S.
+- P-SMART DOI `10.1186/s13244-026-02459-2`: exactly one matching Watch
+  candidate at row 59, candidate YES / priority HIGH, no Master link, status
+  Indexed; zero matching Master_Index DOI records across A1:Z1026.
+- These results establish DOI presence/absence at the moment of the connected
+  read, NOT an authorized, transactionally leased provider write or a new RI ID.
+
+Existing KCH AI Office execution environment reference: Notion checkpoint
+`KCH AI Office — Approval Deployment Readiness NO-GO 2026-11-11`,
+https://app.notion.com/p/4157d7d329718197a187cc7829d8e635 . It records
+read-only Codex audit evidence of missing draft-runtime dependencies,
+`work_reference` issuance, `signed_actions` forwarding, backup baseline,
+fixed host disconnected and no live provider E2E. This is a **KCH AI Office**
+readiness result, not a measurement of RI's GitHub service itself. Until an
+independent current local inspection disproves it, do NOT assume that local
+KCH execution/credential transfer is ready. No shared runner integration or
+local Windows file access has been demonstrated in this ChatGPT session.
+
+The existing MRI Research Watch task remains enabled at 07:10 Asia/Seoul and
+its prompt already defines approval gating and next-candidate continuation.
+No task changes are necessary. Its invocation of the private Python dispatcher
+or KCH AI Office is unverified; a ChatGPT task's connector authorization cannot
+be exported as OAuth bearer tokens to the Python process by assumption.
+
+**Acceptance boundary:** code-only CI PASS; native provider GET metadata PASS via
+ChatGPT connectors; provider write-scope attestation BLOCKED; KCH host deployment
+NO-GO per existing checkpoint; actual production transaction, writeback and
+recovery NOT TESTED. Keep Draft PR #3 unmerged pending distinct user approval.
