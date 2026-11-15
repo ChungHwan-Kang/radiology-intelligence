@@ -4,12 +4,20 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/"scripts"))
-from authorized_github_dispatch import dispatch_github_approved,DispatchBlocked
+from authorized_github_dispatch import (
+    dispatch_github_approved,execution_authorization_value,
+    resume_github_approved,DispatchBlocked,
+)
+
+
+def blob(content):
+    raw=content.encode("utf-8")
+    return hashlib.sha1(b"blob "+str(len(raw)).encode()+b"\0"+raw).hexdigest()
 
 
 class FakeGitHub:
     def __init__(self,paths):
-        self.shas={path:("a"*40 if i else None) for i,path in enumerate(paths)}
+        self.shas={path:(blob("") if i else None) for i,path in enumerate(paths)}
         self.files={path:"" for path in paths}
         self.calls=[]
     def read(self,path):
@@ -20,7 +28,7 @@ class FakeGitHub:
         if self.shas[path]!=expected_sha:
             raise RuntimeError("conflict")
         self.files[path]=content
-        self.shas[path]="b"*40
+        self.shas[path]=blob(content)
         return self.shas[path]
     def read_content(self,path):
         self.calls.append(("readback",path))
@@ -43,12 +51,17 @@ class DispatchTests(unittest.TestCase):
                      "public_html_sha256":hashlib.sha256(self.post.encode()).hexdigest()}
         self.payload={path:(self.post if i==0 else "<test>ri-999-synthetic.html</test>")
                       for i,path in enumerate(self.paths)}
-        self.token="EXECUTE_ARTICLE_SPECIFIC_APPROVED_DISPATCH"
+        self.token=execution_authorization_value(self.plan)
     def run_dispatch(self):
         return dispatch_github_approved(self.plan,self.lease,self.render,self.payload,self.git,self.token)
     def test_no_execution_without_token(self):
-        with self.assertRaisesRegex(DispatchBlocked,"EXPLICIT_EXECUTION_AUTHORIZATION_REQUIRED"):
+        with self.assertRaisesRegex(DispatchBlocked,"EXPLICIT_ARTICLE_HASH_AUTHORIZATION_REQUIRED"):
             dispatch_github_approved(self.plan,self.lease,self.render,self.payload,self.git,None)
+        self.assertFalse(self.git.calls)
+    def test_execution_authorization_is_bound_to_article_and_review_hash(self):
+        wrong=self.token.replace("f"*64,"e"*64)
+        with self.assertRaisesRegex(DispatchBlocked,"EXPLICIT_ARTICLE_HASH_AUTHORIZATION_REQUIRED"):
+            dispatch_github_approved(self.plan,self.lease,self.render,self.payload,self.git,wrong)
         self.assertFalse(self.git.calls)
     def test_no_execution_when_preview_is_not_public(self):
         self.payload[self.paths[0]]='<meta name="robots" content="noindex">'
@@ -104,6 +117,38 @@ class DispatchTests(unittest.TestCase):
         self.assertEqual(r["blocker"],"index.html")
         self.assertEqual(len(r["writes"]),1)
         self.assertFalse(r["publication_complete"])
+
+    def test_recovery_reconciles_and_skips_already_committed_targets(self):
+        original=self.git.write
+        failed={"once":False}
+        def ambiguous_write(path,content,sha):
+            result=original(path,content,sha)
+            if path=="index.html" and not failed["once"]:
+                failed["once"]=True
+                raise ConnectionError("response lost")
+            return result
+        self.git.write=ambiguous_write
+        first=self.run_dispatch()
+        self.assertEqual(first["state"],"PARTIAL_WRITE_OUTCOME_UNKNOWN")
+        before=len([call for call in self.git.calls if call[0]=="write"])
+        recovered=resume_github_approved(
+            self.plan,self.lease,self.render,self.payload,self.git,self.token)
+        after_calls=[call for call in self.git.calls if call[0]=="write"]
+        self.assertEqual(recovered["state"],"GITHUB_WRITES_READBACK_PASS")
+        self.assertEqual(set(recovered["already_present"]),set(self.paths[:2]))
+        self.assertEqual(len(after_calls)-before,3)
+        self.assertEqual([call[1] for call in after_calls].count(self.paths[0]),1)
+        self.assertEqual([call[1] for call in after_calls].count("index.html"),1)
+
+    def test_recovery_is_idempotent_when_all_targets_are_present(self):
+        self.assertEqual(self.run_dispatch()["state"],"GITHUB_WRITES_READBACK_PASS")
+        before=len([call for call in self.git.calls if call[0]=="write"])
+        recovered=resume_github_approved(
+            self.plan,self.lease,self.render,self.payload,self.git,self.token)
+        after=len([call for call in self.git.calls if call[0]=="write"])
+        self.assertEqual(recovered["state"],"GITHUB_WRITES_READBACK_PASS")
+        self.assertEqual(recovered["already_present"],self.paths)
+        self.assertEqual(before,after)
 
 
 if __name__=="__main__":

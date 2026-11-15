@@ -137,3 +137,26 @@ Latest local bounded data trial used previously read connected Sheets published 
 **Do not mark finished:** authorized Google connector -> full private input export, actual installed KCH AI Office Windows invocation, scheduled autonomous final draft and delivery, original-source and terminology independent QA, GitHub Actions hosted job PASS readback, and **postapproval transaction dispatcher with GitHub + two Sheets tabs + Drive + RSS + sitemap + live URL readbacks**. No claim of Windows deployment or cloud-native automation is authorized by this code-only check.
 
 The current proof package and runnable tests exist as local/private session artifacts. Do not upload it to the public repo when it contains connected-sheet snippets or research drafts. Keep public GitHub code-only, RI-031 SOURCE_BLOCKED and RI-025–RI-030 Published.
+
+## 2026-11-15: approval-locked GitHub runtime and public readback QA
+
+The GitHub-only publication runtime now connects the existing approved plan,
+five-file SHA lease, public HTML renderer, site composer, conditional Contents
+API adapter and reconciler. Execution still requires an explicit value bound to
+the exact article ID and approved review SHA. The runtime treats article HTML,
+`index.html`, `categories.html`, `feed.xml` and `sitemap.xml` as one logical
+release payload. GitHub's Contents API writes these as conditional per-file
+commits, so an interrupted release is reconciled before recovery: matching new
+content is skipped, untouched original-SHA targets may continue, and conflicts
+stop for manual review. There is no blind retry.
+
+Read-only post-deployment QA checks the five corresponding public HTTPS URLs
+against the exact prepared payload and parses RSS/sitemap XML. Network
+exceptions, non-200 responses and content validation failures remain distinct
+states. Passing GitHub and HTTP readbacks does not claim Google Sheets, Drive or
+Notion synchronization.
+
+This change was validated only with injected in-memory GitHub/HTTP transports;
+it did not publish an article or use live credentials. Google Sheets remains a
+read-only duplicate gate. Drive and Notion writes remain unimplemented pending
+confirmed permissions, explicit user approval and separate readback contracts.
