@@ -18,6 +18,10 @@ class Provider:
         self.fail_once = None
         self.bad_readback = None
 
+    def assert_ready(self, components):
+        return {"status": "ALL_TARGETS_READ_WRITE_READY",
+                "components": list(components)}
+
     def read(self, component, article_id):
         row = self.data.get(component)
         if row is None:
@@ -132,8 +136,8 @@ class ConnectedCoordinatorTests(unittest.TestCase):
         self.provider.data["sheets_master"] = {
             "article_id": "RI-999", "approved_private_sha256": "bad"}
         result = self.invoke()
-        self.assertEqual(result["status"], "EXTERNAL_WRITEBACK_PARTIAL")
-        self.assertEqual(result["blocker"], "sheets_master")
+        self.assertEqual(result["status"], "EXTERNAL_PREFLIGHT_BLOCKED")
+        self.assertEqual(result["blocker"], "provider")
         self.assertEqual(result["error_type"], "ValueError")
         self.assertFalse(self.provider.creates)
 
@@ -142,6 +146,21 @@ class ConnectedCoordinatorTests(unittest.TestCase):
         result = self.invoke()
         self.assertEqual(result["status"], "EXTERNAL_WRITEBACK_PARTIAL")
         self.assertEqual(result["blocker"], "sheets_master")
+
+    def test_provider_not_ready_blocks_before_github(self):
+        self.provider.assert_ready = lambda _: {"status": "NOT_READY", "components": []}
+        result = self.invoke()
+        self.assertEqual(result["status"], "EXTERNAL_PREFLIGHT_BLOCKED")
+        self.assertFalse(result["public_write_attempted"])
+        self.gh.assert_not_called()
+
+    def test_provider_conflict_blocks_before_github(self):
+        self.provider.data["sheets_master"] = {
+            "article_id": "RI-999", "approved_private_sha256": "different"}
+        result = self.invoke()
+        self.assertEqual(result["status"], "EXTERNAL_PREFLIGHT_BLOCKED")
+        self.gh.assert_not_called()
+        self.assertFalse(self.provider.creates)
 
     def test_live_failure_stops_before_external_sync(self):
         self.live.return_value = {"status": "LIVE_HTTP_NETWORK_ERROR",
