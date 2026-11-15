@@ -123,6 +123,12 @@ class NativeHTTP:
             if not path.startswith("/v1/"):
                 raise ProviderBlocked("NOTION_API_PATH_DENIED")
             token=self.notion_token
+        if provider=="google" and path.startswith("/sheets/"):
+            base="https://sheets.googleapis.com"
+            path=path[len("/sheets"):]
+        elif provider=="google" and path.startswith("/docs/"):
+            base="https://docs.googleapis.com"
+            path=path[len("/docs"):]
         headers={"Authorization":"Bearer "+token,
                  "Accept":"application/json",
                  "User-Agent":"RI-existing-connector-runtime"}
@@ -246,7 +252,7 @@ class NativeProviderAdapter:
         name=self._drive_name()
         quoted=name.replace("\\","\\\\").replace("'","\\'")
         query=urlencode({"q":"'"+DRIVE_FOLDER+"' in parents and name = '"+quoted+"' and trashed = false",
-                         "fields":"nextPageToken,files(id,name,mimeType,appProperties,parents)",
+                         "fields":"nextPageToken,files(id,name,mimeType,description,appProperties,parents)",
                          "page_size":"100"})
         items=self.http.call("google","GET","/drive/v3/files?"+query)
         if items.get("nextPageToken"):
@@ -263,10 +269,10 @@ class NativeProviderAdapter:
         prop=item.get("appProperties",{})
         if prop.get("ri_article_id")!=article_id or prop.get("ri_html_sha256")!=hashlib.sha256(self.html.encode()).hexdigest():
             raise ProviderBlocked("DRIVE_FILE_IDENTITY_CONFLICT")
-        raw=self.http.call("google","GET","/drive/v3/files/"+_q(item["id"])+"?alt=media")
+        raw=self.http.call("google","GET","/drive/v3/files/"+_q(item["id"])+"?alt=media",raw=True)
         if not isinstance(raw,(bytes,bytearray)) or hashlib.sha256(raw).hexdigest()!=prop["ri_html_sha256"]:
             raise ProviderBlocked("DRIVE_CONTENT_READBACK_MISMATCH")
-        return {"record":_from_note(prop.get("ri_receipt","")),
+        return {"record":_from_note(item.get("description","")),
                 "revision":item["id"],"evidence_ref":"https://drive.google.com/file/d/"+item["id"]+"/view"}
 
     def _doc_text(self):
@@ -341,7 +347,7 @@ class NativeProviderAdapter:
         self.http.call("google","GET","/drive/v3/files/"+DRIVE_FOLDER+"?fields=id,mimeType")
         self.http.call("google","GET","/docs/v1/documents/"+HANDOFF_DOC+"?fields=documentId,revisionId")
         notion=self.http.call("notion","GET","/v1/pages/"+NOTION_PAGE)
-        if notion.get("id")!=NOTION_PAGE:
+        if str(notion.get("id","")).replace("-","")!=NOTION_PAGE.replace("-",""):
             raise ProviderBlocked("NOTION_PAGE_MISMATCH")
         return {"status":"ALL_TARGETS_READ_WRITE_READY",
                 "components":list(RECORD_COMPONENTS),
@@ -394,9 +400,9 @@ class NativeProviderAdapter:
         boundary="ri-release-boundary"
         attrs={"name":self._drive_name(),"parents":[DRIVE_FOLDER],
                "mimeType":"text/html",
+               "description":_note(record),
                "appProperties":{"ri_article_id":record["article_id"],
-                                "ri_html_sha256":record["published_html_sha256"],
-                                "ri_receipt":_note(record)}}
+                                "ri_html_sha256":record["published_html_sha256"]}}
         payload=("--"+boundary+"\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n"+
                  _json(attrs)+"\r\n--"+boundary+
                  "\r\nContent-Type: text/html; charset=UTF-8\r\n\r\n").encode("utf-8") + self.html.encode("utf-8") + ("\r\n--"+boundary+"--\r\n").encode()
