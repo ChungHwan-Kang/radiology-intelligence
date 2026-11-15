@@ -203,3 +203,24 @@ be exported as OAuth bearer tokens to the Python process by assumption.
 ChatGPT connectors; provider write-scope attestation BLOCKED; KCH host deployment
 NO-GO per existing checkpoint; actual production transaction, writeback and
 recovery NOT TESTED. Keep Draft PR #3 unmerged pending distinct user approval.
+
+## 2026-11-15 executable-flow safety correction
+
+The private durable runner's local file lock no longer sets or substitutes for
+the independent cross-client single-writer attestation. The native adapter now
+requires all three distinct controls before any provider mutation: an external
+single-writer attestation, the currently held private journal lock, and an
+article-bound attestation naming the exact existing Google/Notion resources and
+all five record components. Read-only GET success alone remains insufficient.
+
+The synthetic end-to-end test executes the real coordinator, conditional
+five-file GitHub dispatch, five-URL content/XML verification, native provider
+translations/readbacks, hash-chained private journal, duplicate prevention and
+completed-run recovery. Its HTTP and provider transports are in-memory; it is
+proof of code-path integration only, not evidence of Codex Cloud credentials,
+real provider write scopes, public deployment, or an external transaction
+lease. P-SMART remains a private no-ID candidate and cannot enter that flow.
+
+KCH AI Office deployment remains **NO-GO**. Windows-local dependency, credential
+handoff, backup and signed-action forwarding checks must be performed in that
+local environment and are not promoted by Cloud tests.

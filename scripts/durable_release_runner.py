@@ -140,7 +140,9 @@ def run_durably(prepared, github_adapter, authorization, provider_adapter,
                         "publication_complete":False}
         # A private file lock is required before claiming a sole-writer
         # attempt. This cannot guarantee exclusion of unrelated publishers.
-        provider_adapter.exclusive=True
+        # This lock covers only this private runner process. It cannot attest
+        # the separate cross-client/provider single-writer requirement.
+        provider_adapter.local_lock_held=True
         try:
             journal.append("ATTEMPT",{"recover":bool(recover),
                                      "external_write_enabled":getattr(provider_adapter,"write_enabled",False)})
@@ -152,4 +154,4 @@ def run_durably(prepared, github_adapter, authorization, provider_adapter,
             return {**result,"journal":str(journal.path),
                     "durable_result_saved":True}
         finally:
-            provider_adapter.exclusive=False
+            provider_adapter.local_lock_held=False

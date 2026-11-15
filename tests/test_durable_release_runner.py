@@ -72,7 +72,7 @@ class JournalTests(unittest.TestCase):
             first=d.run_durably(prepared,object(),auth,provider,self.root)
             self.assertEqual(first["status"],"EXTERNAL_WRITEBACK_PARTIAL")
             self.assertTrue(first["durable_result_saved"])
-            self.assertFalse(provider.exclusive)
+            self.assertFalse(provider.local_lock_held)
             second=d.run_durably(prepared,object(),auth,provider,self.root)
             self.assertEqual(second["status"],"EXPLICIT_RECOVERY_REQUIRED")
             self.assertEqual(mocked.call_count,1)
@@ -80,6 +80,7 @@ class JournalTests(unittest.TestCase):
             self.assertEqual(third["status"],"EXTERNAL_WRITEBACK_PARTIAL")
             self.assertEqual(mocked.call_count,2)
             self.assertTrue(mocked.call_args.kwargs["recover"])
+            self.assertFalse(provider.local_lock_held)
 
     def test_finished_release_cannot_repeat_without_manual_check(self):
         from test_connected_publication_coordinator import fixture, Provider
@@ -104,7 +105,7 @@ class JournalTests(unittest.TestCase):
             "status":"EXTERNAL_PREFLIGHT_BLOCKED"}) as mocked:
             out=d.run_durably(prepared,object(),auth,provider,self.root)
             self.assertEqual(out["status"],"EXTERNAL_PREFLIGHT_BLOCKED")
-            self.assertFalse(provider.exclusive)
+            self.assertFalse(provider.local_lock_held)
             self.assertFalse(provider.write_enabled)
 
 

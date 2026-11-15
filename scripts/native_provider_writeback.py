@@ -34,6 +34,7 @@ REQUIRED_MASTER = {"ID":0, "Title":2, "DOI":10, "Review Status":12,
                    "Content Stage":14, "Published URL":19, "Distribution QA":25}
 REQUIRED_WATCH = {"DOI":4, "Existing Master ID":16}
 EXPECTED_MASTER_WIDTH, EXPECTED_WATCH_WIDTH = 26, 19
+WRITE_SCOPE_ATTESTATION = "RI_EXISTING_PROVIDER_WRITE_SCOPES_V1"
 
 
 class ProviderBlocked(ValueError):
@@ -160,12 +161,18 @@ class NativeProviderAdapter:
     lease, and explicitly enable write. That is not article approval.
     """
     def __init__(self, http, article_metadata, approved_public_html, *,
-                 write_enabled=False, exclusive_writer_attested=False):
+                 write_enabled=False, exclusive_writer_attested=False,
+                 write_scope_attestation=None):
         self.http=http
         self.metadata=article_metadata
         self.html=approved_public_html
         self.write_enabled=(write_enabled is True)
-        self.exclusive=(exclusive_writer_attested is True)
+        # An external cross-client lease and this process's private journal
+        # lock are different controls. The durable runner may set only the
+        # latter; it must never manufacture the former.
+        self.external_single_writer_attested=(exclusive_writer_attested is True)
+        self.local_lock_held=False
+        self.write_scope_attestation=write_scope_attestation
         if not isinstance(article_metadata,dict) or not isinstance(approved_public_html,str):
             raise ProviderBlocked("APPROVED_SOURCE_METADATA_AND_HTML_REQUIRED")
         for key in ("article_id","doi","title","source","source_url","summary",
@@ -175,6 +182,26 @@ class NativeProviderAdapter:
         if not re.fullmatch(r"RI-[0-9]{3}",article_metadata["article_id"]):
             raise ProviderBlocked("INVALID_ARTICLE_ID")
         self._last_master_read=None
+
+    def _write_scope_verified(self):
+        value=self.write_scope_attestation
+        if value is None:
+            return False
+        expected_resources={
+            "spreadsheet":SHEET_ID,
+            "drive_folder":DRIVE_FOLDER,
+            "handoff_document":HANDOFF_DOC,
+            "notion_page":NOTION_PAGE,
+        }
+        if (not isinstance(value,dict)
+            or value.get("status")!=WRITE_SCOPE_ATTESTATION
+            or value.get("article_id")!=self.metadata["article_id"]
+            or set(value.get("components",[]))!=set(RECORD_COMPONENTS)
+            or value.get("resources")!=expected_resources
+            or not isinstance(value.get("evidence_ref"),str)
+            or not value["evidence_ref"].strip()):
+            raise ProviderBlocked("WRITE_SCOPE_ATTESTATION_INVALID")
+        return True
 
     def _ensure_record(self, component, record):
         if component not in RECORD_COMPONENTS:
@@ -345,8 +372,10 @@ class NativeProviderAdapter:
     def assert_ready(self, components):
         if set(components)!=set(RECORD_COMPONENTS):
             raise ProviderBlocked("INCOMPLETE_RECORD_COMPONENTS")
-        if not self.write_enabled or not self.exclusive:
-            raise ProviderBlocked("LIVE_WRITE_DISABLED_OR_NO_SINGLE_WRITER_LEASE")
+        if not self.write_enabled:
+            raise ProviderBlocked("LIVE_WRITE_DISABLED")
+        if not self.external_single_writer_attested:
+            raise ProviderBlocked("EXTERNAL_SINGLE_WRITER_LEASE_REQUIRED")
         # Provider GET checks identity, but cannot attest the tokens' write scopes.
         metadata=self.http.call("google","GET","/sheets/v4/spreadsheets/"+SHEET_ID+
                                 "?fields=spreadsheetId,sheets(properties(sheetId,title))")
@@ -365,15 +394,26 @@ class NativeProviderAdapter:
         notion=self.http.call("notion","GET","/v1/pages/"+NOTION_PAGE)
         if str(notion.get("id","")).replace("-","")!=NOTION_PAGE.replace("-",""):
             raise ProviderBlocked("NOTION_PAGE_MISMATCH")
+        scopes=self._write_scope_verified()
+        ready=scopes and self.local_lock_held
         # Successful GETs cannot demonstrate permission to modify any
-        # provider. Never label this as write-ready.
-        return {"status":"READ_ONLY_PREFLIGHT_PASS_WRITE_SCOPE_UNVERIFIED",
-                "components":list(RECORD_COMPONENTS),
-                "actual_write_scopes_verified":False,
-                "caller_single_writer_lease_attested":True}
+        # provider. Only a separately obtained, exact-resource attestation may
+        # promote this adapter, and the durable local lock must already exist.
+        return {
+            "status":("ALL_TARGETS_READ_WRITE_READY" if ready
+                      else "READ_ONLY_PREFLIGHT_PASS_WRITE_SCOPE_UNVERIFIED"),
+            "components":list(RECORD_COMPONENTS),
+            "actual_write_scopes_verified":bool(scopes),
+            "caller_single_writer_lease_attested":bool(
+                self.external_single_writer_attested and self.local_lock_held),
+            "write_scope_evidence_ref":(
+                self.write_scope_attestation.get("evidence_ref") if scopes else None),
+        }
 
     def create(self, component, record, expected_absent=True):
-        if not self.write_enabled or not self.exclusive or expected_absent is not True:
+        if (not self.write_enabled or not self.external_single_writer_attested
+            or not self.local_lock_held or not self._write_scope_verified()
+            or expected_absent is not True):
             raise ProviderBlocked("NONCONDITIONAL_PROVIDER_WRITE_DENIED")
         self._ensure_record(component,record)
         if self.read(component,record["article_id"]) is not None:

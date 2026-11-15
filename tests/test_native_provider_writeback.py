@@ -28,6 +28,17 @@ def record(component, html="<html>synthetic</html>"):
             "component":component}
 
 
+def write_scope_attestation(article_id="RI-999"):
+    return {
+        "status":p.WRITE_SCOPE_ATTESTATION,
+        "article_id":article_id,
+        "components":list(p.RECORD_COMPONENTS),
+        "resources":{"spreadsheet":p.SHEET_ID,"drive_folder":p.DRIVE_FOLDER,
+                     "handoff_document":p.HANDOFF_DOC,"notion_page":p.NOTION_PAGE},
+        "evidence_ref":"mock://verified-existing-provider-write-scopes",
+    }
+
+
 class FakeNativeHTTP:
     """Models response shapes for real native endpoints; no network."""
     def __init__(self):
@@ -125,12 +136,14 @@ class NativeAdapterTests(unittest.TestCase):
         self.api=FakeNativeHTTP()
         self.html="<html>synthetic</html>"
         self.adapter=p.NativeProviderAdapter(self.api,metadata(),self.html,
-                  write_enabled=True,exclusive_writer_attested=True)
+                  write_enabled=True,exclusive_writer_attested=True,
+                  write_scope_attestation=write_scope_attestation())
+        self.adapter.local_lock_held=True
 
     def test_five_native_records_roundtrip(self):
         state=self.adapter.assert_ready(p.RECORD_COMPONENTS)
-        self.assertEqual(state["status"],"READ_ONLY_PREFLIGHT_PASS_WRITE_SCOPE_UNVERIFIED")
-        self.assertFalse(state["actual_write_scopes_verified"])
+        self.assertEqual(state["status"],"ALL_TARGETS_READ_WRITE_READY")
+        self.assertTrue(state["actual_write_scopes_verified"])
         for component in p.RECORD_COMPONENTS:
             expected=record(component)
             self.assertIsNone(self.adapter.read(component,"RI-999"))
@@ -149,8 +162,26 @@ class NativeAdapterTests(unittest.TestCase):
 
     def test_exclusive_writer_required(self):
         locked=p.NativeProviderAdapter(self.api,metadata(),self.html,write_enabled=True)
-        with self.assertRaisesRegex(p.ProviderBlocked,"SINGLE_WRITER"):
+        with self.assertRaisesRegex(p.ProviderBlocked,"EXTERNAL_SINGLE_WRITER"):
             locked.assert_ready(p.RECORD_COMPONENTS)
+
+    def test_local_journal_lock_cannot_manufacture_external_lease(self):
+        locked=p.NativeProviderAdapter(
+            self.api,metadata(),self.html,write_enabled=True,
+            write_scope_attestation=write_scope_attestation())
+        locked.local_lock_held=True
+        with self.assertRaisesRegex(p.ProviderBlocked,"EXTERNAL_SINGLE_WRITER"):
+            locked.assert_ready(p.RECORD_COMPONENTS)
+
+    def test_write_scope_attestation_is_exact_resource_and_article_bound(self):
+        bad=write_scope_attestation("RI-998")
+        locked=p.NativeProviderAdapter(
+            self.api,metadata(),self.html,write_enabled=True,
+            exclusive_writer_attested=True,write_scope_attestation=bad)
+        locked.local_lock_held=True
+        with self.assertRaisesRegex(p.ProviderBlocked,"WRITE_SCOPE_ATTESTATION_INVALID"):
+            locked.assert_ready(p.RECORD_COMPONENTS)
+        self.assertFalse(self.api.writes)
 
     def test_watch_no_matching_doi_fails_without_write(self):
         self.api.watch=self.api.watch[:1]
