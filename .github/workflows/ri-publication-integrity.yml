@@ -37,7 +37,11 @@ on:
       - 'tests/test_connected_release_preflight.py'
       - 'tests/test_github_contents_adapter.py'
       - 'scripts/publication_site_composer.py'
+      - 'scripts/live_publication_verifier.py'
+      - 'scripts/approved_publication_runtime.py'
       - 'tests/test_publication_site_composer.py'
+      - 'tests/test_live_publication_verifier.py'
+      - 'tests/test_approved_publication_runtime.py'
       - 'tests/test_authorized_github_dispatch.py'
       - 'tests/test_publication_release_journal.py'
       - 'scripts/sheets_bridge.py'
@@ -45,6 +49,7 @@ on:
       - 'tests/test_editorial_queue.py'
       - 'tests/test_verify_publication.py'
       - 'AGENTS.md'
+      - 'docs/editorial-v2-private-gate.md'
       - '.github/workflows/ri-publication-integrity.yml'
 permissions:
   contents: read

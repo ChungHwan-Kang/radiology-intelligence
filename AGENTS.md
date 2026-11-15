@@ -22,4 +22,6 @@ These rules apply to the whole repository.
 
 - `scripts/verify_publication.py` is read-only. By default it must discover every HTML file in `posts/` carrying `article:published_time`, including newly added Published articles.
 - Published articles must retain their canonical URL, publication metadata, JSON-LD BlogPosting data, indexability, editorial sections, site stylesheet/RSS links, and references from the home page, category page, RSS feed, and sitemap.
+- Treat article HTML, `index.html`, `categories.html`, `feed.xml`, and `sitemap.xml` as one approval- and SHA-locked release payload. After an ambiguous write, re-fetch and reconcile all five targets; never blindly retry a target whose expected content is already present.
+- After GitHub readbacks match, verify all five public HTTPS responses. Keep transport failures, non-200 responses, and content/hash/XML failures as distinct outcomes. HTTP success alone does not prove external Sheets, Drive, or Notion synchronization.
 - Changes to publication tooling must include focused regression tests and keep the full suite passing.

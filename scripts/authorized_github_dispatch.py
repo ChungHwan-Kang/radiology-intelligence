@@ -24,17 +24,25 @@ def _digest(content):
     return hashlib.sha256(content.encode("utf-8")).hexdigest()
 
 
-def dispatch_github_approved(plan, lease, rendered, contents, adapter, approval_token):
-    """Try one ordered GitHub release; stop at first failed remote verification.
+def execution_authorization_value(plan):
+    """Return the exact, article-and-review-hash-bound execution phrase.
 
-    A returned PARTIAL status must be preserved by the caller. A network
-    exception deliberately propagates rather than guessing whether a write
-    took place; recheck the remote before any manual retry.
+    This value is not a credential and does not create approval. The caller may
+    supply it only after the user explicitly authorizes this exact article and
+    approved review hash for public GitHub dispatch.
     """
-    if approval_token != "EXECUTE_ARTICLE_SPECIFIC_APPROVED_DISPATCH":
-        raise DispatchBlocked("EXPLICIT_EXECUTION_AUTHORIZATION_REQUIRED")
-    if plan.get("status") != "READY_FOR_AUTHORIZED_DISPATCH":
+    if not isinstance(plan,dict) or plan.get("status")!="READY_FOR_AUTHORIZED_DISPATCH":
         raise DispatchBlocked("APPROVED_ARTICLE_PLAN_REQUIRED")
+    article_id=plan.get("article_id")
+    approved=plan.get("approved_sha256")
+    if not isinstance(article_id,str) or not isinstance(approved,str) or len(approved)!=64:
+        raise DispatchBlocked("INVALID_APPROVAL_IDENTITY")
+    return "EXECUTE_APPROVED_GITHUB_PUBLICATION:"+article_id+":"+approved
+
+
+def _validate_release(plan,lease,rendered,contents,approval_token):
+    if approval_token != execution_authorization_value(plan):
+        raise DispatchBlocked("EXPLICIT_ARTICLE_HASH_AUTHORIZATION_REQUIRED")
     if lease.get("status") != "READY_FOR_CONDITIONAL_WRITE_PRECHECK":
         raise DispatchBlocked("SHA_LEASE_REQUIRED")
     if rendered.get("status") != "PUBLIC_HTML_RENDERED_NOT_PUBLISHED":
@@ -59,6 +67,40 @@ def dispatch_github_approved(plan, lease, rendered, contents, adapter, approval_
     for path in paths[1:]:
         if plan["slug"] not in contents[path]:
             raise DispatchBlocked("MISSING_ARTICLE_LINK:"+path)
+    return article_id,paths,lease_shas
+
+
+def _write_paths(report,paths,lease_shas,contents,adapter):
+    for path in paths:
+        expected=lease_shas[path]
+        try:
+            result_sha=adapter.write(path,contents[path],expected)
+            if not isinstance(result_sha,str) or len(result_sha)!=40:
+                raise DispatchBlocked("WRITE_RECEIPT_NOT_SHA:"+path)
+            observed_content=adapter.read_content(path)
+        except Exception as exc:
+            report.update(state="PARTIAL_WRITE_OUTCOME_UNKNOWN",blocker=path,
+                          recovery_action="REFETCH_REMOTE_AND_RECONCILE_BEFORE_RETRY",
+                          error_type=type(exc).__name__)
+            return report
+        if _digest(observed_content)!=_digest(contents[path]):
+            report.update(state="PARTIAL_READBACK_MISMATCH",blocker=path,
+                          recovery_action="REFETCH_REMOTE_AND_RECONCILE_BEFORE_RETRY")
+            return report
+        report["writes"].append({"path":path,"returned_blob_sha":result_sha,
+                                "readback_sha256":_digest(observed_content)})
+    return report
+
+
+def dispatch_github_approved(plan, lease, rendered, contents, adapter, approval_token):
+    """Try one ordered GitHub release; stop at first failed remote verification.
+
+    A returned PARTIAL status must be preserved by the caller. A network
+    exception deliberately propagates rather than guessing whether a write
+    took place; recheck the remote before any manual retry.
+    """
+    article_id,paths,lease_shas=_validate_release(
+        plan,lease,rendered,contents,approval_token)
     report={
         "state":"PREFLIGHT_COMPLETE",
         "article_id":article_id,
@@ -76,28 +118,72 @@ def dispatch_github_approved(plan, lease, rendered, contents, adapter, approval_
         if observed != expected:
             report.update(state="BLOCKED_REMOTE_CHANGED",blocker=path)
             return report
-    for path in paths:
-        expected=lease_shas[path]
-        try:
-            result_sha=adapter.write(path,contents[path],expected)
-            if not isinstance(result_sha,str) or len(result_sha)!=40:
-                raise DispatchBlocked("WRITE_RECEIPT_NOT_SHA:"+path)
-            observed_content=adapter.read_content(path)
-        except Exception as exc:
-            # The remote may have committed before a response was lost.
-            # Never retry automatically, since doing so can duplicate writes.
-            report.update(state="PARTIAL_WRITE_OUTCOME_UNKNOWN",blocker=path,
-                          recovery_action="REFETCH_REMOTE_AND_RECONCILE_BEFORE_RETRY",
-                          error_type=type(exc).__name__)
-            return report
-        if _digest(observed_content)!=_digest(contents[path]):
-            report.update(state="PARTIAL_READBACK_MISMATCH",blocker=path,
-                          recovery_action="REFETCH_REMOTE_AND_RECONCILE_BEFORE_RETRY")
-            return report
-        report["writes"].append({"path":path,"returned_blob_sha":result_sha,
-                                "readback_sha256":_digest(observed_content)})
+    report=_write_paths(report,paths,lease_shas,contents,adapter)
+    if report["state"]!="PREFLIGHT_COMPLETE":
+        return report
     report["state"]="GITHUB_WRITES_READBACK_PASS"
     report["external_system_sync"]="PENDING_SHEETS_DRIVE_NOTION"
     report["live_render_qa"]="PENDING"
     report["publication_complete"]=False
+    return report
+
+
+def resume_github_approved(plan,lease,rendered,contents,adapter,approval_token):
+    """Reconcile an interrupted release and write only untouched targets.
+
+    This is an explicit recovery operation using the same article/hash-bound
+    authorization. Expected new content is never written again. Conflicting
+    content always requires manual review.
+    """
+    article_id,paths,lease_shas=_validate_release(
+        plan,lease,rendered,contents,approval_token)
+    from github_release_reconciler import reconcile_github_release
+    reconciliation=reconcile_github_release(plan,lease,contents,adapter)
+    if reconciliation["status"]=="MANUAL_CONFLICT_REVIEW_REQUIRED":
+        return {"state":"RECOVERY_BLOCKED_CONFLICT","article_id":article_id,
+                "reconciliation":reconciliation,"writes":[],
+                "publication_complete":False}
+    if reconciliation["status"]=="GITHUB_TARGETS_READBACK_MATCH":
+        return {"state":"GITHUB_WRITES_READBACK_PASS","article_id":article_id,
+                "reconciliation":reconciliation,"writes":[],
+                "already_present":list(paths),"publication_complete":False,
+                "external_system_sync":"PENDING_SHEETS_DRIVE_NOTION",
+                "live_render_qa":"PENDING"}
+    states=reconciliation["paths"]
+    if any(state not in ("EXPECTED_NEW_CONTENT_PRESENT","UNCHANGED_FROM_PREPUBLICATION")
+           for state in states.values()):
+        raise DispatchBlocked("RECOVERY_STATE_NOT_SAFE")
+    remaining=[path for path in paths if states[path]=="UNCHANGED_FROM_PREPUBLICATION"]
+    report={"state":"RECOVERY_PREFLIGHT_COMPLETE","article_id":article_id,
+            "github_only":True,"writes":[],
+            "already_present":[path for path in paths if path not in remaining],
+            "reconciliation":reconciliation,"external_system_sync":"NOT_RUN",
+            "live_render_qa":"NOT_RUN","publication_complete":False}
+    # Recheck all five targets immediately before resuming. Already completed
+    # targets must still match the exact payload; untouched targets must still
+    # match the original SHA lease.
+    for path in paths:
+        if states[path]=="EXPECTED_NEW_CONTENT_PRESENT":
+            try:
+                if _digest(adapter.read_content(path))!=_digest(contents[path]):
+                    report.update(state="RECOVERY_BLOCKED_REMOTE_CHANGED",blocker=path)
+                    return report
+            except Exception as exc:
+                report.update(state="RECOVERY_READ_FAILED",blocker=path,
+                              error_type=type(exc).__name__)
+                return report
+        elif adapter.read(path)!=lease_shas[path]:
+            report.update(state="RECOVERY_BLOCKED_REMOTE_CHANGED",blocker=path)
+            return report
+    report=_write_paths(report,remaining,lease_shas,contents,adapter)
+    if report["state"]!="RECOVERY_PREFLIGHT_COMPLETE":
+        return report
+    final=reconcile_github_release(plan,lease,contents,adapter)
+    report["reconciliation_after_resume"]=final
+    if final["status"]!="GITHUB_TARGETS_READBACK_MATCH":
+        report["state"]="RECOVERY_FINAL_READBACK_FAILED"
+        return report
+    report.update(state="GITHUB_WRITES_READBACK_PASS",
+                  external_system_sync="PENDING_SHEETS_DRIVE_NOTION",
+                  live_render_qa="PENDING")
     return report
