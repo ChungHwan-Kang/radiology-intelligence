@@ -5,7 +5,7 @@ This module does NOT obtain credentials or configure a job. An authorized caller
 injects authenticated GitHub and provider-specific adapters, and preserves
 the return report privately. Provider adapters must implement:
 
-    read(component, article_id) -> None or {
+    assert_ready(components) -> {"status": "ALL_TARGETS_READ_WRITE_READY",\n                                  "components": complete list}\n    read(component, article_id) -> None or {
         "record": exact canonical record dict, "revision": provider revision,
         "evidence_ref": provider-native URL / id
     }
@@ -142,6 +142,28 @@ def run_approved_connected_release(prepared, github_adapter, authorization,
         "publication_complete": False,
         "public_write_attempted": False,
     }
+    # Provider capability/read-only conflict checks must precede irreversible
+    # GitHub writes. This does not establish independent OAuth provenance.
+    try:
+        readiness = provider_adapter.assert_ready(RECORD_COMPONENTS)
+        if not isinstance(readiness, dict) or readiness.get("status") != "ALL_TARGETS_READ_WRITE_READY":
+            raise ValueError("PROVIDER_READ_WRITE_CAPABILITIES_NOT_READY")
+        if set(readiness.get("components", [])) != set(RECORD_COMPONENTS):
+            raise ValueError("PROVIDER_COMPONENT_SET_INCOMPLETE")
+        for component in RECORD_COMPONENTS:
+            expected = _record(prepared, component)
+            observed = _validate_read(
+                component, plan["article_id"],
+                provider_adapter.read(component, plan["article_id"]))
+            if observed is not None and observed["record"] != expected:
+                raise ValueError("PREPUBLICATION_PROVIDER_RECORD_CONFLICT:" + component)
+    except Exception as exc:
+        report.update(status="EXTERNAL_PREFLIGHT_BLOCKED", blocker="provider",
+                      error_type=type(exc).__name__,
+                      recovery_action="FIX_PROVIDER_PERMISSIONS_OR_CONFLICT_BEFORE_RELEASE")
+        return report
+    report["external_preflight"] = "ADAPTER_ATTESTED_READY"
+
     try:
         github = execute_prepared_github_release(
             prepared, github_adapter, authorization, recover=recover
