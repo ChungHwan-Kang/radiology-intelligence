@@ -40,6 +40,8 @@ on:
       - 'scripts/live_publication_verifier.py'
       - 'scripts/approved_publication_runtime.py'
       - 'scripts/connected_publication_coordinator.py'
+      - 'scripts/native_provider_writeback.py'
+      - 'tests/test_native_provider_writeback.py'
       - 'tests/test_connected_publication_coordinator.py'
       - 'tests/test_publication_site_composer.py'
       - 'tests/test_live_publication_verifier.py'
