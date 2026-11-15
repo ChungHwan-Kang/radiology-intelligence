@@ -129,7 +129,7 @@ class NativeAdapterTests(unittest.TestCase):
 
     def test_five_native_records_roundtrip(self):
         state=self.adapter.assert_ready(p.RECORD_COMPONENTS)
-        self.assertEqual(state["status"],"ALL_TARGETS_READ_WRITE_READY")
+        self.assertEqual(state["status"],"READ_ONLY_PREFLIGHT_PASS_WRITE_SCOPE_UNVERIFIED")
         self.assertFalse(state["actual_write_scopes_verified"])
         for component in p.RECORD_COMPONENTS:
             expected=record(component)
