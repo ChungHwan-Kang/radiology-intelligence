@@ -64,6 +64,8 @@ class PrivateReleaseJournal:
                 os.fsync(f.fileno())
         except FileExistsError as exc:
             raise JournalBlocked("EXCLUSIVE_RELEASE_LOCK_EXISTS_MANUAL_REVIEW") from exc
+        if self.path.is_symlink():
+            raise JournalBlocked("SYMLINK_RELEASE_JOURNAL_DENIED")
         self.preexisting=self.path.exists()
         if self.preexisting:
             self.entries() # verify chain and exact identity before allowing recovery
