@@ -20,7 +20,9 @@ class Provider:
 
     def assert_ready(self, components):
         return {"status": "ALL_TARGETS_READ_WRITE_READY",
-                "components": list(components)}
+                "components": list(components),
+                "actual_write_scopes_verified": True,
+                "caller_single_writer_lease_attested": True}
 
     def read(self, component, article_id):
         row = self.data.get(component)
@@ -146,6 +148,26 @@ class ConnectedCoordinatorTests(unittest.TestCase):
         result = self.invoke()
         self.assertEqual(result["status"], "EXTERNAL_WRITEBACK_PARTIAL")
         self.assertEqual(result["blocker"], "sheets_master")
+
+    def test_get_only_provider_cannot_authorize_github_write(self):
+        self.provider.assert_ready = lambda components: {
+            "status": "ALL_TARGETS_READ_WRITE_READY",
+            "components": list(components),
+            "actual_write_scopes_verified": False,
+            "caller_single_writer_lease_attested": True}
+        result = self.invoke()
+        self.assertEqual(result["status"], "EXTERNAL_PREFLIGHT_BLOCKED")
+        self.gh.assert_not_called()
+
+    def test_missing_single_writer_attestation_blocks_github(self):
+        self.provider.assert_ready = lambda components: {
+            "status": "ALL_TARGETS_READ_WRITE_READY",
+            "components": list(components),
+            "actual_write_scopes_verified": True,
+            "caller_single_writer_lease_attested": False}
+        result = self.invoke()
+        self.assertEqual(result["status"], "EXTERNAL_PREFLIGHT_BLOCKED")
+        self.gh.assert_not_called()
 
     def test_provider_not_ready_blocks_before_github(self):
         self.provider.assert_ready = lambda _: {"status": "NOT_READY", "components": []}
