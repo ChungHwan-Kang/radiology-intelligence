@@ -43,6 +43,8 @@ on:
       - 'scripts/sheets_bridge.py'
       - 'tests/test_private_editorial_gate.py'
       - 'tests/test_editorial_queue.py'
+      - 'tests/test_verify_publication.py'
+      - 'AGENTS.md'
       - '.github/workflows/ri-publication-integrity.yml'
 permissions:
   contents: read
@@ -56,8 +58,5 @@ jobs:
           python-version: '3.12'
       - name: Test editorial queue and private approval gates
         run: python -m unittest discover -s tests -p 'test_*.py' -v
-      - name: Validate latest approved articles
-        run: |
-          python scripts/verify_publication.py \
-            --article ri-029-euroaim-efrs-radiographer-ai-research-survey.html \
-            --article ri-030-li-rads-threshold-growth-10mm-ipd-meta-analysis.html
+      - name: Validate every Published article
+        run: python scripts/verify_publication.py
