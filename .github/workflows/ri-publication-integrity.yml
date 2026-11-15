@@ -39,6 +39,8 @@ on:
       - 'scripts/publication_site_composer.py'
       - 'scripts/live_publication_verifier.py'
       - 'scripts/approved_publication_runtime.py'
+      - 'scripts/connected_publication_coordinator.py'
+      - 'tests/test_connected_publication_coordinator.py'
       - 'tests/test_publication_site_composer.py'
       - 'tests/test_live_publication_verifier.py'
       - 'tests/test_approved_publication_runtime.py'
