@@ -365,7 +365,9 @@ class NativeProviderAdapter:
         notion=self.http.call("notion","GET","/v1/pages/"+NOTION_PAGE)
         if str(notion.get("id","")).replace("-","")!=NOTION_PAGE.replace("-",""):
             raise ProviderBlocked("NOTION_PAGE_MISMATCH")
-        return {"status":"ALL_TARGETS_READ_WRITE_READY",
+        # Successful GETs cannot demonstrate permission to modify any
+        # provider. Never label this as write-ready.
+        return {"status":"READ_ONLY_PREFLIGHT_PASS_WRITE_SCOPE_UNVERIFIED",
                 "components":list(RECORD_COMPONENTS),
                 "actual_write_scopes_verified":False,
                 "caller_single_writer_lease_attested":True}
