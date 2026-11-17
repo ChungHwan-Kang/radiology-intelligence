@@ -18,6 +18,7 @@ from native_provider_writeback import (
 )
 from native_sheets_reader import NativeSheetsReader
 from publication_transaction import plan_publish, render_approved_public_html
+from windows_ri_credentials import CredentialError, enroll_google, enroll_notion, provider_token
 
 
 REPO = "ChungHwan-Kang/radiology-intelligence"
@@ -112,13 +113,14 @@ def read_inputs(args):
 
 
 def run_release(args):
-    google, notion = (os.environ.get(name) for name in TOKEN_NAMES)
-    if not google or not notion:
-        raise ValueError("LOCAL_GOOGLE_AND_NOTION_CREDENTIALS_REQUIRED")
     plan, receipt, article_dir, source = read_inputs(args)
     status, pr = github_api("GET", f"repos/{REPO}/pulls/3")
     if status != 200 or pr.get("draft") is not False or pr.get("merged") is not True:
         raise ValueError("RI_PR_NOT_APPROVED_FOR_PRODUCTION")
+    google, notion = (
+        provider_token(service, os.environ.get(name))
+        for service, name in zip(("google", "notion"), TOKEN_NAMES)
+    )
     github = GitHubContentsAdapter(REPO, "main", contents_via_gh, live_write_enabled=True)
     http = NativeHTTP(google, notion)
     published_at = receipt["published_at"]
@@ -187,10 +189,13 @@ def check_connections():
     if not github.read("feed.xml"):
         raise ValueError("GITHUB_PUBLICATION_TARGET_NOT_FOUND")
     print("GITHUB_CONTENTS_READ PASS")
-    tokens = [os.environ.get(name) for name in TOKEN_NAMES]
-    for name, token in zip(TOKEN_NAMES, tokens):
-        print(name, "PRESENT_UNVERIFIED" if token else "MISSING")
-    if not all(tokens):
+    tokens = []
+    for service, name in zip(("google", "notion"), TOKEN_NAMES):
+        try:
+            tokens.append(provider_token(service, os.environ.get(name)))
+        except CredentialError as error:
+            print(f"{service.upper()}_AUTH BLOCKED", error)
+    if len(tokens) != len(TOKEN_NAMES):
         return 1
 
     http = NativeHTTP(*tokens)
@@ -203,22 +208,40 @@ def check_connections():
          "documentId", HANDOFF_DOC),
         ("NOTION", "notion", f"/v1/pages/{NOTION_PAGE}", "id", NOTION_PAGE),
     )
+    ready = True
     for label, service, path, field, expected in targets:
-        result = http.call(service, "GET", path)
+        try:
+            result = http.call(service, "GET", path)
+        except (ValueError, OSError) as error:
+            match = re.fullmatch(r"(?:GOOGLE|NOTION)_HTTP_(\d{3})", str(error))
+            code = {
+                "401": "CREDENTIAL_REAUTHORIZATION_REQUIRED",
+                "403": "TARGET_ACCESS_DENIED",
+                "404": "TARGET_UNAVAILABLE_OR_NOT_SHARED",
+            }.get(match[1] if match else None, "READ_FAILED")
+            print(f"{label}_READ BLOCKED", code)
+            ready = False
+            continue
         actual = result.get(field)
         if service == "notion" and isinstance(actual, str) and len(actual) == 32:
             expected = expected.replace("-", "")
         if actual != expected:
-            raise ValueError(f"{label}_CANONICAL_TARGET_MISMATCH")
+            print(f"{label}_READ BLOCKED CANONICAL_TARGET_MISMATCH")
+            ready = False
+            continue
         print(f"{label}_READ PASS")
     print("PROVIDER_WRITE_PERMISSIONS NOT_VERIFIED")
-    return 0
+    return 0 if ready else 1
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("check", help="Read-only authentication and target checks")
+    enroll = commands.add_parser("auth-enroll", help="Explicitly enroll existing provider credentials in Windows")
+    method = enroll.add_mutually_exclusive_group(required=True)
+    method.add_argument("--google-client", type=Path, help="Existing RI Desktop OAuth client JSON")
+    method.add_argument("--notion", action="store_true", help="Enroll the existing Notion RI internal connection")
     release = commands.add_parser("release", help="Run a separately authorized manual release")
     release.add_argument("article_id")
     release.add_argument("--receipt", type=Path, required=True, help="External approval and evidence JSON")
@@ -227,6 +250,12 @@ def main():
     try:
         if args.command == "check":
             return check_connections()
+        if args.command == "auth-enroll":
+            if args.google_client:
+                enroll_google(args.google_client)
+            else:
+                enroll_notion()
+            return 0
         if not re.fullmatch(r"RI-[0-9]{3}", args.article_id):
             raise ValueError("INVALID_ARTICLE_ID")
         return run_release(args)

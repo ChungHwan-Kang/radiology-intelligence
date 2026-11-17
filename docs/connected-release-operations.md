@@ -251,3 +251,31 @@ receipt source contract and component list match the resulting plan. A
 WinError 1314 while exercising symlink-only tests is a Windows privilege
 precondition, not permission to weaken private-path or symlink checks. No live
 release is authorized by this contract or its tests.
+
+## Windows credential reuse
+
+After confirming local credential storage is permitted, enroll only the
+existing RI connections under the Windows account that runs the checks:
+
+```powershell
+python scripts\windows_ri_release.py auth-enroll --google-client "C:\LOCAL\existing-desktop-client.json"
+python scripts\windows_ri_release.py auth-enroll --notion
+python scripts\windows_ri_release.py check
+```
+
+Keep the downloaded Desktop OAuth client JSON outside Git. The Google
+enrollment opens a browser for the existing Desktop client and accepts only
+`drive.file` on the three canonical files/folder. The Notion enrollment
+accepts the existing internal connection through hidden console input and
+verifies the RI page before saving. Neither step writes provider records.
+
+The Windows Credential Manager entries are local to the current Windows user
+and PC. The runner exchanges the Google refresh token for a short-lived token
+in memory. External apps still in Testing have the Google seven-day refresh
+token limit. When a grant is rejected, `check` reports the affected service
+and never starts browser consent on its own. Previously supplied session-only
+environment variables remain accepted for manual use.
+
+A successful `check` verifies resource reads only. Publication still requires
+the existing independently recorded article approval, write-scope evidence
+and external single-writer evidence.
