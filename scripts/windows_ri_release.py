@@ -104,6 +104,10 @@ def read_inputs(args):
     attestation = receipt.get("write_scope_attestation") or {}
     if attestation.get("approved_sha256") != plan["approved_sha256"]:
         raise ValueError("ARTICLE_BOUND_PROVIDER_WRITE_EVIDENCE_REQUIRED")
+    source_contract=receipt.get("source_contract")
+    if not isinstance(source_contract,dict) or source_contract.get("source_kind") not in (
+            "research_watch","master_news"):
+        raise ValueError("EXPLICIT_SOURCE_CONTRACT_REQUIRED")
     return plan, receipt, article_dir, json.loads(source_bytes)
 
 
@@ -134,10 +138,16 @@ def run_release(args):
             raise ValueError("ORIGINAL_PREFLIGHT_EXISTS_USE_EXPLICIT_RECOVERY")
         sheets = NativeSheetsReader(lambda url: sheets_via_native_http(http, url))
         prepared = prepare_release_with_provider_reads(
-            DATA, args.article_id, published_at, github, sheets
+            DATA, args.article_id, published_at, github, sheets,
+            receipt["source_contract"]
         )
         if prepared["plan"] != plan:
             raise ValueError("APPROVED_PLAN_CHANGED_DURING_PREFLIGHT")
+    if prepared.get("source_contract")!=receipt["source_contract"]:
+        raise ValueError("APPROVED_SOURCE_CONTRACT_CHANGED")
+    if tuple(receipt["write_scope_attestation"].get("components",()))!=tuple(
+            prepared.get("record_components",())):
+        raise ValueError("APPROVED_PROVIDER_COMPONENTS_CHANGED")
     rendered = prepared["bundle"]["rendered"]
     if rendered != render_approved_public_html(DATA, args.article_id, published_at[:10]):
         raise ValueError("APPROVED_PUBLIC_RENDER_MISMATCH")
@@ -152,6 +162,8 @@ def run_release(args):
     provider = NativeProviderAdapter(
         http, metadata, rendered["html"], write_enabled=True,
         exclusive_writer_attested=True, write_scope_attestation=receipt["write_scope_attestation"],
+        source_contract=prepared["source_contract"],
+        record_components=prepared["record_components"],
     )
     # Retain the rendered publication payload and original SHA expectations only.
     # Reacquiring them after a partial write could destroy the recovery baseline.

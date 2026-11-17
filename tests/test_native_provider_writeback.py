@@ -19,20 +19,30 @@ def metadata():
             "slug":"ri-999-fixture.html"}
 
 
-def record(component, html="<html>synthetic</html>"):
+def research_source():
+    return {"source_kind":"research_watch","source_watch_doi":"10.1000/synthetic"}
+
+
+def news_source():
+    return {"source_kind":"master_news","source_master_id":"RB-208",
+            "source_master_content_stage":"Private"}
+
+
+def record(component, html="<html>synthetic</html>", source=None):
+    source=source or research_source()
     return {"article_id":"RI-999","doi":"10.1000/synthetic",
             "slug":"ri-999-fixture.html",
             "published_url":"https://example.org/ri-999.html",
             "approved_private_sha256":"a"*64,
             "published_html_sha256":hashlib.sha256(html.encode()).hexdigest(),
-            "component":component}
+            "component":component,**source}
 
 
-def write_scope_attestation(article_id="RI-999"):
+def write_scope_attestation(article_id="RI-999",components=None):
     return {
         "status":p.WRITE_SCOPE_ATTESTATION,
         "article_id":article_id,
-        "components":list(p.RECORD_COMPONENTS),
+        "components":list(components or p.RECORD_COMPONENTS),
         "resources":{"spreadsheet":p.SHEET_ID,"drive_folder":p.DRIVE_FOLDER,
                      "handoff_document":p.HANDOFF_DOC,"notion_page":p.NOTION_PAGE},
         "evidence_ref":"mock://verified-existing-provider-write-scopes",
@@ -137,7 +147,8 @@ class NativeAdapterTests(unittest.TestCase):
         self.html="<html>synthetic</html>"
         self.adapter=p.NativeProviderAdapter(self.api,metadata(),self.html,
                   write_enabled=True,exclusive_writer_attested=True,
-                  write_scope_attestation=write_scope_attestation())
+                  write_scope_attestation=write_scope_attestation(),
+                  source_contract=research_source(),record_components=p.RECORD_COMPONENTS)
         self.adapter.local_lock_held=True
 
     def test_five_native_records_roundtrip(self):
@@ -152,8 +163,33 @@ class NativeAdapterTests(unittest.TestCase):
             self.assertEqual(saved["record"],expected)
             self.assertTrue(saved["evidence_ref"])
 
+    def test_news_source_preserves_rb_and_writes_only_four_records(self):
+        api=FakeNativeHTTP()
+        rb=[""]*26
+        rb[0]="RB-208";rb[10]="10.1000/synthetic";rb[14]="Private"
+        api.master.append(rb)
+        api.watch=api.watch[:1]
+        components=p.NEWS_RECORD_COMPONENTS
+        adapter=p.NativeProviderAdapter(
+            api,metadata(),self.html,write_enabled=True,
+            exclusive_writer_attested=True,
+            write_scope_attestation=write_scope_attestation(components=components),
+            source_contract=news_source(),record_components=components)
+        adapter.local_lock_held=True
+        self.assertEqual(adapter.assert_ready(components)["components"],list(components))
+        for component in components:
+            expected=record(component,source=news_source())
+            self.assertIsNone(adapter.read(component,"RI-999"))
+            adapter.create(component,expected,expected_absent=True)
+            self.assertEqual(adapter.read(component,"RI-999")["record"],expected)
+        self.assertEqual(api.master[1][0],"RB-208")
+        self.assertEqual(api.master[1][14],"Private")
+        self.assertNotIn("sheets_watch",components)
+        self.assertFalse(any(row[16] for row in api.watch[1:] if len(row)>16))
+
     def test_readonly_default_blocks_mutations(self):
-        locked=p.NativeProviderAdapter(self.api,metadata(),self.html)
+        locked=p.NativeProviderAdapter(self.api,metadata(),self.html,
+            source_contract=research_source(),record_components=p.RECORD_COMPONENTS)
         with self.assertRaisesRegex(p.ProviderBlocked,"LIVE_WRITE_DISABLED"):
             locked.assert_ready(p.RECORD_COMPONENTS)
         with self.assertRaisesRegex(p.ProviderBlocked,"NONCONDITIONAL"):
@@ -161,14 +197,16 @@ class NativeAdapterTests(unittest.TestCase):
         self.assertFalse(self.api.writes)
 
     def test_exclusive_writer_required(self):
-        locked=p.NativeProviderAdapter(self.api,metadata(),self.html,write_enabled=True)
+        locked=p.NativeProviderAdapter(self.api,metadata(),self.html,write_enabled=True,
+            source_contract=research_source(),record_components=p.RECORD_COMPONENTS)
         with self.assertRaisesRegex(p.ProviderBlocked,"EXTERNAL_SINGLE_WRITER"):
             locked.assert_ready(p.RECORD_COMPONENTS)
 
     def test_local_journal_lock_cannot_manufacture_external_lease(self):
         locked=p.NativeProviderAdapter(
             self.api,metadata(),self.html,write_enabled=True,
-            write_scope_attestation=write_scope_attestation())
+            write_scope_attestation=write_scope_attestation(),
+            source_contract=research_source(),record_components=p.RECORD_COMPONENTS)
         locked.local_lock_held=True
         with self.assertRaisesRegex(p.ProviderBlocked,"EXTERNAL_SINGLE_WRITER"):
             locked.assert_ready(p.RECORD_COMPONENTS)
@@ -177,7 +215,8 @@ class NativeAdapterTests(unittest.TestCase):
         bad=write_scope_attestation("RI-998")
         locked=p.NativeProviderAdapter(
             self.api,metadata(),self.html,write_enabled=True,
-            exclusive_writer_attested=True,write_scope_attestation=bad)
+            exclusive_writer_attested=True,write_scope_attestation=bad,
+            source_contract=research_source(),record_components=p.RECORD_COMPONENTS)
         locked.local_lock_held=True
         with self.assertRaisesRegex(p.ProviderBlocked,"WRITE_SCOPE_ATTESTATION_INVALID"):
             locked.assert_ready(p.RECORD_COMPONENTS)

@@ -224,3 +224,30 @@ lease. P-SMART remains a private no-ID candidate and cannot enter that flow.
 KCH AI Office deployment remains **NO-GO**. Windows-local dependency, credential
 handoff, backup and signed-action forwarding checks must be performed in that
 local environment and are not promoted by Cloud tests.
+
+## Issue #4: explicit news versus research source contract
+
+Every Windows release receipt must now contain one exact source contract. A
+research release uses `source_kind: research_watch` and a DOI-identical
+`source_watch_doi`; it retains the existing exactly-one unlinked Watch-row
+requirement and writes all five provider records. A news-derived release uses
+`source_kind: master_news`, its exact `source_master_id`, and
+`source_master_content_stage: Private`. It is eligible only when the live
+Master sheet has exactly one DOI owner, that owner is the named `RB-###` row,
+the row remains Private, no Watch row has that DOI, and no RI article already
+owns it.
+
+The news release creates a separate RI Master row and records the RB-to-RI
+relationship in every release receipt. It never updates the source RB row and
+does not invent or link a Watch row. Its provider unit is therefore exactly
+Master, Drive Published copy, Current_Handoff and Notion. The approved write
+scope attestation must name that same ordered component set. Approval SHA,
+GitHub five-target lease/readback, public HTTP/XML QA, external single-writer
+evidence, private journal chain, read-before-create and recovery gates are
+unchanged.
+
+Before a Windows preflight, re-read both canonical Sheet tabs and confirm the
+receipt source contract and component list match the resulting plan. A
+WinError 1314 while exercising symlink-only tests is a Windows privilege
+precondition, not permission to weaken private-path or symlink checks. No live
+release is authorized by this contract or its tests.

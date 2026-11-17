@@ -48,6 +48,9 @@ class ConnectedReleaseEndToEndTests(unittest.TestCase):
                     "public_html_sha256": hashlib.sha256(article.encode()).hexdigest()}
         prepared = {"status": "CONNECTED_GITHUB_READONLY_PREFLIGHT_READY",
                     "plan": plan, "lease": lease,
+                    "source_contract":{"source_kind":"research_watch",
+                                       "source_watch_doi":plan["doi"]},
+                    "record_components":list(native.RECORD_COMPONENTS),
                     "bundle": {"status": "APPROVED_SITE_PAYLOAD_READY_NOT_PUBLISHED",
                                "plan": plan, "rendered": rendered,
                                "contents": contents}}
@@ -59,7 +62,10 @@ class ConnectedReleaseEndToEndTests(unittest.TestCase):
         provider = native.NativeProviderAdapter(
             api, metadata(), article, write_enabled=True,
             exclusive_writer_attested=True,
-            write_scope_attestation=write_scope_attestation())
+            write_scope_attestation=write_scope_attestation(),
+            source_contract={"source_kind":"research_watch",
+                             "source_watch_doi":prepared["plan"]["doi"]},
+            record_components=native.RECORD_COMPONENTS)
 
         def fetch(url):
             public_path = urlsplit(url).path.lstrip("/")

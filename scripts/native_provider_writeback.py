@@ -20,7 +20,7 @@ from urllib.error import HTTPError
 from urllib.parse import quote, urlencode
 from urllib.request import Request, HTTPRedirectHandler, build_opener
 
-from connected_publication_coordinator import RECORD_COMPONENTS
+from connected_publication_coordinator import RECORD_COMPONENTS,NEWS_RECORD_COMPONENTS
 from native_sheets_duplicate_guard import norm_doi
 
 SHEET_ID = "1ZcyBs9Bpk7QURErOx5RVrucc-GcL9BlGyPmeR168YgM"
@@ -162,7 +162,8 @@ class NativeProviderAdapter:
     """
     def __init__(self, http, article_metadata, approved_public_html, *,
                  write_enabled=False, exclusive_writer_attested=False,
-                 write_scope_attestation=None):
+                 write_scope_attestation=None, source_contract=None,
+                 record_components=None):
         self.http=http
         self.metadata=article_metadata
         self.html=approved_public_html
@@ -173,6 +174,8 @@ class NativeProviderAdapter:
         self.external_single_writer_attested=(exclusive_writer_attested is True)
         self.local_lock_held=False
         self.write_scope_attestation=write_scope_attestation
+        self.source_contract=source_contract
+        self.record_components=tuple(record_components or ())
         if not isinstance(article_metadata,dict) or not isinstance(approved_public_html,str):
             raise ProviderBlocked("APPROVED_SOURCE_METADATA_AND_HTML_REQUIRED")
         for key in ("article_id","doi","title","source","source_url","summary",
@@ -181,6 +184,19 @@ class NativeProviderAdapter:
                 raise ProviderBlocked("MISSING_CANONICAL_METADATA:"+key)
         if not re.fullmatch(r"RI-[0-9]{3}",article_metadata["article_id"]):
             raise ProviderBlocked("INVALID_ARTICLE_ID")
+        if not isinstance(source_contract,dict) or source_contract.get("source_kind") not in (
+                "research_watch","master_news"):
+            raise ProviderBlocked("EXPLICIT_SOURCE_CONTRACT_REQUIRED")
+        expected=(RECORD_COMPONENTS if source_contract["source_kind"]=="research_watch"
+                  else NEWS_RECORD_COMPONENTS)
+        if self.record_components!=expected:
+            raise ProviderBlocked("SOURCE_RECORD_COMPONENT_MISMATCH")
+        if source_contract["source_kind"]=="research_watch":
+            if norm_doi(source_contract.get("source_watch_doi"))!=norm_doi(article_metadata["doi"]):
+                raise ProviderBlocked("RESEARCH_WATCH_SOURCE_DOI_MISMATCH")
+        elif (not re.fullmatch(r"RB-[0-9]+",str(source_contract.get("source_master_id","")))
+              or source_contract.get("source_master_content_stage")!="Private"):
+            raise ProviderBlocked("NEWS_SOURCE_CONTRACT_INVALID")
         self._last_master_read=None
 
     def _write_scope_verified(self):
@@ -196,7 +212,7 @@ class NativeProviderAdapter:
         if (not isinstance(value,dict)
             or value.get("status")!=WRITE_SCOPE_ATTESTATION
             or value.get("article_id")!=self.metadata["article_id"]
-            or set(value.get("components",[]))!=set(RECORD_COMPONENTS)
+            or tuple(value.get("components",[]))!=self.record_components
             or value.get("resources")!=expected_resources
             or not isinstance(value.get("evidence_ref"),str)
             or not value["evidence_ref"].strip()):
@@ -204,7 +220,7 @@ class NativeProviderAdapter:
         return True
 
     def _ensure_record(self, component, record):
-        if component not in RECORD_COMPONENTS:
+        if component not in self.record_components:
             raise ProviderBlocked("UNKNOWN_RECORD_COMPONENT")
         if not isinstance(record,dict):
             raise ProviderBlocked("RELEASE_RECORD_REQUIRED")
@@ -214,6 +230,11 @@ class NativeProviderAdapter:
             raise ProviderBlocked("ARTICLE_METADATA_DOI_MISMATCH")
         if record.get("component")!=component:
             raise ProviderBlocked("RELEASE_COMPONENT_MISMATCH")
+        if record.get("source_kind")!=self.source_contract["source_kind"]:
+            raise ProviderBlocked("RELEASE_SOURCE_KIND_MISMATCH")
+        for key in ("source_master_id","source_master_content_stage","source_watch_doi"):
+            if key in self.source_contract and record.get(key)!=self.source_contract[key]:
+                raise ProviderBlocked("RELEASE_SOURCE_RELATION_MISMATCH")
         if record.get("slug")!=self.metadata["slug"] or record.get("published_url")!=self.metadata["published_url"]:
             raise ProviderBlocked("RELEASE_TARGET_METADATA_MISMATCH")
         digest=record.get("approved_private_sha256")
@@ -258,9 +279,20 @@ class NativeProviderAdapter:
         ids=self._matching_rows(values,0,article_id)
         doi=self.metadata["doi"].lower()
         doi_rows=self._matching_rows(values,10,doi)
-        if len(ids)>1 or len(doi_rows)>1:
+        if len(ids)>1:
             raise ProviderBlocked("DUPLICATE_MASTER_REMOTE")
-        if doi_rows and (not ids or doi_rows[0][0]!=ids[0][0]):
+        if len(doi_rows)>1 and (
+                self.source_contract["source_kind"]!="master_news" or len(doi_rows)>2):
+            raise ProviderBlocked("DUPLICATE_MASTER_REMOTE")
+        if self.source_contract["source_kind"]=="master_news":
+            source_id=self.source_contract["source_master_id"]
+            source=[(i,row) for i,row in doi_rows if row and row[0].strip()==source_id]
+            if len(source)!=1 or len(source[0][1])<=14 or source[0][1][14]!=self.source_contract["source_master_content_stage"]:
+                raise ProviderBlocked("NEWS_SOURCE_MASTER_ROW_MISMATCH")
+            allowed={source_id,article_id}
+            if any(not row or row[0].strip() not in allowed for _,row in doi_rows):
+                raise ProviderBlocked("MASTER_DOI_ALREADY_OWNED")
+        elif doi_rows and (not ids or doi_rows[0][0]!=ids[0][0]):
             raise ProviderBlocked("MASTER_DOI_ALREADY_OWNED")
         if not ids:
             return None
@@ -361,7 +393,7 @@ class NativeProviderAdapter:
                 if rows else None)
 
     def read(self, component, article_id):
-        if component not in RECORD_COMPONENTS or article_id!=self.metadata["article_id"]:
+        if component not in self.record_components or article_id!=self.metadata["article_id"]:
             raise ProviderBlocked("READ_IDENTITY_MISMATCH")
         return {
             "sheets_master":self._master, "sheets_watch":self._watch,
@@ -370,7 +402,7 @@ class NativeProviderAdapter:
         }[component](article_id)
 
     def assert_ready(self, components):
-        if set(components)!=set(RECORD_COMPONENTS):
+        if tuple(components)!=self.record_components:
             raise ProviderBlocked("INCOMPLETE_RECORD_COMPONENTS")
         if not self.write_enabled:
             raise ProviderBlocked("LIVE_WRITE_DISABLED")
@@ -402,7 +434,7 @@ class NativeProviderAdapter:
         return {
             "status":("ALL_TARGETS_READ_WRITE_READY" if ready
                       else "READ_ONLY_PREFLIGHT_PASS_WRITE_SCOPE_UNVERIFIED"),
-            "components":list(RECORD_COMPONENTS),
+            "components":list(self.record_components),
             "actual_write_scopes_verified":bool(scopes),
             "caller_single_writer_lease_attested":bool(
                 self.external_single_writer_attested and self.local_lock_held),
@@ -425,7 +457,17 @@ class NativeProviderAdapter:
 
     def _write_master(self, record):
         values=self._values("Master_Index",26)
-        if self._matching_rows(values,0,record["article_id"]) or self._matching_rows(values,10,record["doi"]):
+        ids=self._matching_rows(values,0,record["article_id"])
+        doi_rows=self._matching_rows(values,10,record["doi"])
+        if ids:
+            raise ProviderBlocked("MASTER_DUPLICATE_BEFORE_APPEND")
+        if self.source_contract["source_kind"]=="master_news":
+            source_id=self.source_contract["source_master_id"]
+            source=[(i,row) for i,row in doi_rows if row and row[0].strip()==source_id]
+            if (len(doi_rows)!=1 or len(source)!=1 or len(source[0][1])<=14
+                or source[0][1][14]!=self.source_contract["source_master_content_stage"]):
+                raise ProviderBlocked("NEWS_SOURCE_MASTER_ROW_MISMATCH")
+        elif doi_rows:
             raise ProviderBlocked("MASTER_DUPLICATE_BEFORE_APPEND")
         m=self.metadata
         row=[""]*26
