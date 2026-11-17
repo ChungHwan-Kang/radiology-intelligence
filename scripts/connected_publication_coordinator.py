@@ -35,6 +35,7 @@ RECORD_COMPONENTS = (
     "current_handoff",
     "notion",
 )
+NEWS_RECORD_COMPONENTS = tuple(x for x in RECORD_COMPONENTS if x!="sheets_watch")
 
 
 def _digest(value):
@@ -57,9 +58,23 @@ def private_candidate_preflight(candidate):
     }
 
 
+def _release_components(prepared):
+    source=prepared.get("source_contract")
+    components=prepared.get("record_components")
+    if not isinstance(source,dict) or source.get("source_kind") not in (
+            "research_watch","master_news"):
+        raise ValueError("EXPLICIT_SOURCE_CONTRACT_REQUIRED")
+    expected=(RECORD_COMPONENTS if source["source_kind"]=="research_watch"
+              else NEWS_RECORD_COMPONENTS)
+    if not isinstance(components,list) or tuple(components)!=expected:
+        raise ValueError("SOURCE_RECORD_COMPONENT_MISMATCH")
+    return source,expected
+
+
 def _record(prepared, component):
     plan, _, _, contents = _release_parts(prepared)
-    if component not in RECORD_COMPONENTS:
+    source,components=_release_components(prepared)
+    if component not in components:
         raise ValueError("UNKNOWN_WRITEBACK_COMPONENT")
     post_path = plan["required_targets"][0]
     meta = {
@@ -70,7 +85,13 @@ def _record(prepared, component):
         "approved_private_sha256": plan["approved_sha256"],
         "published_html_sha256": _digest(contents[post_path]),
         "component": component,
+        "source_kind":source["source_kind"],
     }
+    if source["source_kind"]=="master_news":
+        meta["source_master_id"]=source["source_master_id"]
+        meta["source_master_content_stage"]=source["source_master_content_stage"]
+    else:
+        meta["source_watch_doi"]=source["source_watch_doi"]
     # The adapter maps this identity to its existing canonical schema. This
     # record is deliberately not a guessed Sheet row / Notion property payload.
     return meta
@@ -129,11 +150,15 @@ def run_approved_connected_release(prepared, github_adapter, authorization,
     All provider receipts are adapter-attested, not an independent OAuth audit.
     """
     plan, _, _, _ = _release_parts(prepared)
+    source_contract,components=_release_components(prepared)
     if authorization != execution_authorization_value(plan):
         raise ValueError("ARTICLE_HASH_AUTHORIZATION_REQUIRED")
     report = {
         "article_id": plan["article_id"],
         "approved_sha256": plan["approved_sha256"],
+        "doi":plan["doi"],
+        "source_contract":dict(source_contract),
+        "record_components":list(components),
         "status": "PRECHECK",
         "github": None,
         "live": None,
@@ -145,10 +170,10 @@ def run_approved_connected_release(prepared, github_adapter, authorization,
     # Provider capability/read-only conflict checks must precede irreversible
     # GitHub writes. This does not establish independent OAuth provenance.
     try:
-        readiness = provider_adapter.assert_ready(RECORD_COMPONENTS)
+        readiness = provider_adapter.assert_ready(components)
         if not isinstance(readiness, dict) or readiness.get("status") != "ALL_TARGETS_READ_WRITE_READY":
             raise ValueError("PROVIDER_READ_WRITE_CAPABILITIES_NOT_READY")
-        if set(readiness.get("components", [])) != set(RECORD_COMPONENTS):
+        if tuple(readiness.get("components", [])) != components:
             raise ValueError("PROVIDER_COMPONENT_SET_INCOMPLETE")
         # A GET-only provider must never authorize irreversible GitHub writes.
         # Provider capability is established separately by an authorized
@@ -157,7 +182,7 @@ def run_approved_connected_release(prepared, github_adapter, authorization,
             raise ValueError("PROVIDER_WRITE_SCOPES_NOT_VERIFIED")
         if readiness.get("caller_single_writer_lease_attested") is not True:
             raise ValueError("PROVIDER_SINGLE_WRITER_LOCK_NOT_ATTESTED")
-        for component in RECORD_COMPONENTS:
+        for component in components:
             expected = _record(prepared, component)
             observed = _validate_read(
                 component, plan["article_id"],
@@ -203,7 +228,7 @@ def run_approved_connected_release(prepared, github_adapter, authorization,
 
     # Google and Notion records are separate provider transactions. Failure is
     # not a rollback; resume safely using read-before-create on every target.
-    for component in RECORD_COMPONENTS:
+    for component in components:
         record = _record(prepared, component)
         try:
             receipt = _sync_one(provider_adapter, component, record)

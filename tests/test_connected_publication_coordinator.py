@@ -62,6 +62,9 @@ def fixture():
     }
     return {
         "status": "CONNECTED_GITHUB_READONLY_PREFLIGHT_READY",
+        "source_contract":{"source_kind":"research_watch",
+                           "source_watch_doi":plan["doi"]},
+        "record_components":list(c.RECORD_COMPONENTS),
         "plan": plan,
         "lease": {"status": "READY_FOR_CONDITIONAL_WRITE_PRECHECK"},
         "bundle": {
@@ -133,6 +136,23 @@ class ConnectedCoordinatorTests(unittest.TestCase):
         second = self.invoke(recover=True)
         self.assertEqual(second["status"], "ADAPTER_ATTESTED_WRITEBACK_READBACK_PASS")
         self.assertEqual(self.provider.creates.count("drive_published_copy"), 1)
+
+    def test_news_source_uses_four_records_and_recovers_without_watch(self):
+        self.prepared["source_contract"]={
+            "source_kind":"master_news","source_master_id":"RB-208",
+            "source_master_content_stage":"Private"}
+        self.prepared["record_components"]=list(c.NEWS_RECORD_COMPONENTS)
+        self.provider.fail_once="drive_published_copy"
+        first=self.invoke()
+        self.assertEqual(first["status"],"EXTERNAL_WRITEBACK_PARTIAL")
+        second=self.invoke(recover=True)
+        self.assertEqual(second["status"],"ADAPTER_ATTESTED_WRITEBACK_READBACK_PASS")
+        self.assertEqual(second["external_records_count"],4)
+        self.assertNotIn("sheets_watch",self.provider.creates)
+        saved=self.provider.data["sheets_master"]
+        self.assertEqual(saved["source_master_id"],"RB-208")
+        self.assertEqual(saved["source_kind"],"master_news")
+        self.assertEqual(self.provider.creates.count("drive_published_copy"),1)
 
     def test_conflicting_existing_record_fails_closed(self):
         self.provider.data["sheets_master"] = {

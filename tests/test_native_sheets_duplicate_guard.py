@@ -19,7 +19,9 @@ class NativeSheetsGuardTests(unittest.TestCase):
         self.watch=[w,[""]*4+["10.1000/new-item"]+[""]*9+["YES","HIGH","","Indexed","2026-11-09"]]
     def verdict(self,doi="10.1000/new-item",article_id="RI-031"):
         return build_native_duplicate_guard(self.master,self.watch,article_id,doi,
-                                            spreadsheet_id=CANONICAL,read_ranges=RANGES)
+                                            spreadsheet_id=CANONICAL,read_ranges=RANGES,
+                                            source_contract={"source_kind":"research_watch",
+                                                             "source_watch_doi":doi})
     def test_clean_native_values_pass_and_do_not_authorize_publication(self):
         r=self.verdict()
         self.assertEqual(r["status"],"CALLER_NATIVE_SHEETS_DUPLICATE_GUARD_PASS")
@@ -55,12 +57,46 @@ class NativeSheetsGuardTests(unittest.TestCase):
     def test_wrong_source_id_or_range_blocks(self):
         with self.assertRaisesRegex(ValueError,"UNEXPECTED_CANONICAL_SHEET_ID"):
             build_native_duplicate_guard(self.master,self.watch,"RI-031","10.1000/new-item",
-                                         spreadsheet_id="wrong",read_ranges=RANGES)
+                                         spreadsheet_id="wrong",read_ranges=RANGES,
+                                         source_contract={"source_kind":"research_watch",
+                                                          "source_watch_doi":"10.1000/new-item"})
         with self.assertRaisesRegex(ValueError,"CANONICAL_NATIVE_RANGE_MISMATCH"):
             build_native_duplicate_guard(self.master,self.watch,"RI-031","10.1000/new-item",
                                          spreadsheet_id=CANONICAL,
                                          read_ranges={"Master_Index":"A1:Z2",
-                                                      "MRI_Research_Watch":"A1:S1000"})
+                                                      "MRI_Research_Watch":"A1:S1000"},
+                                         source_contract={"source_kind":"research_watch",
+                                                          "source_watch_doi":"10.1000/new-item"})
+
+    def test_master_news_allows_one_exact_rb_owner_and_no_watch(self):
+        rb=[""]*26
+        rb[0]="RB-208";rb[10]="10.1000/news";rb[14]="Private"
+        self.master.append(rb)
+        result=build_native_duplicate_guard(
+            self.master,self.watch,"RI-031","10.1000/news",
+            spreadsheet_id=CANONICAL,read_ranges=RANGES,
+            source_contract={"source_kind":"master_news","source_master_id":"RB-208",
+                             "source_master_content_stage":"Private"})
+        self.assertEqual(result["record_components"],
+                         ["sheets_master","drive_published_copy","current_handoff","notion"])
+        self.assertEqual(self.master[-1][0],"RB-208")
+        self.assertEqual(self.master[-1][14],"Private")
+
+    def test_master_news_rejects_other_owner_second_ri_and_watch_row(self):
+        rb=[""]*26
+        rb[0]="RB-208";rb[10]="10.1000/news";rb[14]="Private"
+        self.master.append(rb)
+        contract={"source_kind":"master_news","source_master_id":"RB-208",
+                  "source_master_content_stage":"Private"}
+        self.master.append(["RI-032"]+[""]*9+["10.1000/news"])
+        with self.assertRaisesRegex(ValueError,"NOT_UNIQUE"):
+            build_native_duplicate_guard(self.master,self.watch,"RI-031","10.1000/news",
+                spreadsheet_id=CANONICAL,read_ranges=RANGES,source_contract=contract)
+        self.master.pop()
+        self.watch.append([""]*4+["10.1000/news"])
+        with self.assertRaisesRegex(ValueError,"UNEXPECTED_WATCH"):
+            build_native_duplicate_guard(self.master,self.watch,"RI-031","10.1000/news",
+                spreadsheet_id=CANONICAL,read_ranges=RANGES,source_contract=contract)
 
 
 if __name__=="__main__":

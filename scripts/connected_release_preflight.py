@@ -15,7 +15,8 @@ INDEX_PATHS=("index.html","categories.html","feed.xml","sitemap.xml")
 
 
 def prepare_release_with_provider_reads(
-        private_root,article_id,published_at,github_adapter,sheets_reader):
+        private_root,article_id,published_at,github_adapter,sheets_reader,
+        source_contract=None):
     """Live double-read data gate plus GitHub no-write preparation.
 
     Provider read provenance is the actual reader method invocation in this
@@ -30,7 +31,7 @@ def prepare_release_with_provider_reads(
         private_root,article_id,published_at,github_adapter,
         initial["values"]["Master_Index"],
         initial["values"]["MRI_Research_Watch"],
-        initial["spreadsheet_id"],initial["read_ranges"])
+        initial["spreadsheet_id"],initial["read_ranges"],source_contract)
     confirm=sheets_reader.read()
     if initial["sha256"]!=confirm["sha256"] or initial["tab_ids"]!=confirm["tab_ids"]:
         raise ValueError("NATIVE_SHEETS_CHANGED_DURING_PREFLIGHT")
@@ -48,7 +49,8 @@ def prepare_release_with_provider_reads(
 
 def prepare_connected_release_from_native_sheets(
         private_root, article_id, published_at, adapter,
-        master_values, watch_values, spreadsheet_id, read_ranges):
+        master_values, watch_values, spreadsheet_id, read_ranges,
+        source_contract=None):
     """Bind provider-native row data to the approved no-write GitHub preflight.
 
     This wrapper checks the actual values supplied by a connector caller;
@@ -58,13 +60,16 @@ def prepare_connected_release_from_native_sheets(
     plan=plan_publish(private_root,article_id)
     checked=build_native_duplicate_guard(
         master_values,watch_values,article_id,plan["doi"],
-        spreadsheet_id=spreadsheet_id,read_ranges=read_ranges)
+        spreadsheet_id=spreadsheet_id,read_ranges=read_ranges,
+        source_contract=source_contract)
     prepared=prepare_connected_github_release(
         private_root,article_id,published_at,adapter,
         published_dois=(),published_ids=())
     if prepared["plan"]["doi"]!=checked["doi"]:
         raise ValueError("NATIVE_SHEET_DOI_PREFLIGHT_MISMATCH")
     prepared["native_sheets_duplicate_guard"]=checked
+    prepared["source_contract"]=checked["source_contract"]
+    prepared["record_components"]=checked["record_components"]
     prepared["duplicate_guard_source"]="NATIVE_VALUES_CALLER_SUPPLIED_NOT_PROVIDER_ATTESTED"
     prepared["ready_for_unattended_publication"]=False
     return prepared

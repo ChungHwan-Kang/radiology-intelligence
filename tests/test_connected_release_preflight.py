@@ -85,7 +85,8 @@ class ConnectedPreflightTests(unittest.TestCase):
         r=prepare_connected_release_from_native_sheets(
             self.root,"RI-999","2026-11-09T10:00:00+09:00",self.adapter,
             master,watch,"1ZcyBs9Bpk7QURErOx5RVrucc-GcL9BlGyPmeR168YgM",
-            {"Master_Index":"A1:Z1026","MRI_Research_Watch":"A1:S1000"})
+            {"Master_Index":"A1:Z1026","MRI_Research_Watch":"A1:S1000"},
+            {"source_kind":"research_watch","source_watch_doi":"10.1000/synthetic-code-test"})
         self.assertEqual(r["native_sheets_duplicate_guard"]["matching_watch_doi_rows"],1)
         self.assertEqual(r["status"],"CONNECTED_GITHUB_READONLY_PREFLIGHT_READY")
         self.assertFalse(r["ready_for_unattended_publication"])
@@ -96,7 +97,8 @@ class ConnectedPreflightTests(unittest.TestCase):
             prepare_connected_release_from_native_sheets(
                 self.root,"RI-999","2026-11-09T10:00:00+09:00",self.adapter,
                 master,watch,"1ZcyBs9Bpk7QURErOx5RVrucc-GcL9BlGyPmeR168YgM",
-                {"Master_Index":"A1:Z1026","MRI_Research_Watch":"A1:S1000"})
+                {"Master_Index":"A1:Z1026","MRI_Research_Watch":"A1:S1000"},
+                {"source_kind":"research_watch","source_watch_doi":"10.1000/synthetic-code-test"})
 
     def test_provider_read_twice_is_linked_to_approved_no_write_release(self):
         from native_sheets_reader import NativeSheetsReader, SHEET_ID, SHEET_IDS
@@ -119,7 +121,8 @@ class ConnectedPreflightTests(unittest.TestCase):
             return 200,{"range":a1,"majorDimension":"ROWS","values":values[name]}
         result=prepare_release_with_provider_reads(
             self.root,"RI-999","2026-11-09T10:00:00+09:00",
-            self.adapter,NativeSheetsReader(provider))
+            self.adapter,NativeSheetsReader(provider),
+            {"source_kind":"research_watch","source_watch_doi":"10.1000/synthetic-code-test"})
         self.assertEqual(result["status"],"CONNECTED_GITHUB_READONLY_PREFLIGHT_READY")
         self.assertEqual(len(calls),10)
         self.assertEqual(len(result["bundle"]["contents"]),5)

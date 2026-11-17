@@ -35,8 +35,28 @@ def _check_table(values,cols,requirements,name):
             raise ValueError(name+"_INVALID_ROW:"+str(i))
 
 
+def _source_contract(value, candidate):
+    if not isinstance(value,dict):
+        raise ValueError("EXPLICIT_SOURCE_CONTRACT_REQUIRED")
+    kind=value.get("source_kind")
+    if kind=="research_watch":
+        if norm_doi(value.get("source_watch_doi"))!=candidate:
+            raise ValueError("RESEARCH_WATCH_SOURCE_DOI_MISMATCH")
+        return {"source_kind":kind,"source_watch_doi":candidate}
+    if kind=="master_news":
+        source_id=value.get("source_master_id")
+        stage=value.get("source_master_content_stage")
+        if not isinstance(source_id,str) or not re.fullmatch(r"RB-[0-9]+",source_id):
+            raise ValueError("NEWS_SOURCE_MASTER_ID_INVALID")
+        if stage!="Private":
+            raise ValueError("NEWS_SOURCE_MUST_REMAIN_PRIVATE")
+        return {"source_kind":kind,"source_master_id":source_id,
+                "source_master_content_stage":stage.strip()}
+    raise ValueError("UNSUPPORTED_SOURCE_KIND")
+
+
 def build_native_duplicate_guard(master_values,watch_values,article_id,doi,
-                                 *,spreadsheet_id,read_ranges):
+                                 *,spreadsheet_id,read_ranges,source_contract=None):
     """Validate structural fidelity and return one explicit duplicate verdict.
 
     Never infer that the caller actually read live Sheets merely from the
@@ -55,8 +75,9 @@ def build_native_duplicate_guard(master_values,watch_values,article_id,doi,
         raise ValueError("ARTICLE_DOI_INVALID")
     _check_table(master_values,26,MASTER_HEADERS,"MASTER")
     _check_table(watch_values,19,WATCH_HEADERS,"WATCH")
+    source=_source_contract(source_contract,candidate)
     ids=set()
-    dois=set()
+    doi_rows=[]
     for i,row in enumerate(master_values[1:],2):
         rid=str(row[0]).strip() if row else ""
         if rid:
@@ -67,7 +88,9 @@ def build_native_duplicate_guard(master_values,watch_values,article_id,doi,
         if d:
             if not re.fullmatch(r"10\.\d{4,9}/\S+",d):
                 raise ValueError("INVALID_MASTER_DOI_ROW:"+str(i))
-            dois.add(d)
+            if d==candidate:
+                doi_rows.append({"row":i,"id":rid,
+                                 "content_stage":str(row[14]).strip() if len(row)>14 else ""})
     watch_matches=0
     for i,row in enumerate(watch_values[1:],2):
         priority=str(row[15]).strip().upper() if len(row)>15 else ""
@@ -85,14 +108,31 @@ def build_native_duplicate_guard(master_values,watch_values,article_id,doi,
             raise ValueError("ARTICLE_ID_ALREADY_LINKED_IN_WATCH_ROW:"+str(i))
     if article_id in ids:
         raise ValueError("ALREADY_IN_MASTER_ID")
-    if candidate in dois:
-        raise ValueError("ALREADY_IN_MASTER_DOI")
+    if source["source_kind"]=="research_watch":
+        if doi_rows:
+            raise ValueError("ALREADY_IN_MASTER_DOI")
+        if watch_matches!=1:
+            raise ValueError("RESEARCH_WATCH_DOI_ROW_NOT_UNIQUE")
+        components=["sheets_master","sheets_watch","drive_published_copy",
+                    "current_handoff","notion"]
+    else:
+        if len(doi_rows)!=1:
+            raise ValueError("NEWS_SOURCE_MASTER_DOI_ROW_NOT_UNIQUE")
+        owner=doi_rows[0]
+        if (owner["id"]!=source["source_master_id"]
+            or owner["content_stage"]!=source["source_master_content_stage"]):
+            raise ValueError("NEWS_SOURCE_MASTER_ROW_MISMATCH")
+        if watch_matches:
+            raise ValueError("NEWS_SOURCE_UNEXPECTED_WATCH_ROW")
+        components=["sheets_master","drive_published_copy","current_handoff","notion"]
     return {
         "status":"CALLER_NATIVE_SHEETS_DUPLICATE_GUARD_PASS",
         "article_id":article_id,"doi":candidate,
         "master_data_rows":len(master_values)-1,
         "watch_data_rows":len(watch_values)-1,
         "matching_watch_doi_rows":watch_matches,
+        "source_contract":source,
+        "record_components":components,
         "duplicate_master_ids":False,"duplicate_master_dois":False,
         "source_verified_independently":False,
         "provider_read_provenance":"CALLER_DECLARED_NOT_AUTHENTICATED_BY_GUARD",
