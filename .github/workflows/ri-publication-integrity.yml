@@ -43,6 +43,8 @@ on:
       - 'scripts/native_provider_writeback.py'
       - 'scripts/windows_ri_credentials.py'
       - 'scripts/approval_event_contract.py'
+      - 'scripts/approval_worker.py'
+      - 'tests/test_approval_worker.py'
       - 'tests/test_approval_event_contract.py'
       - 'scripts/windows_ri_release.py'
       - 'tests/test_windows_ri_credentials.py'
