@@ -42,6 +42,8 @@ on:
       - 'scripts/connected_publication_coordinator.py'
       - 'scripts/native_provider_writeback.py'
       - 'scripts/windows_ri_credentials.py'
+      - 'scripts/approval_event_contract.py'
+      - 'tests/test_approval_event_contract.py'
       - 'scripts/windows_ri_release.py'
       - 'tests/test_windows_ri_credentials.py'
       - 'scripts/durable_release_runner.py'
