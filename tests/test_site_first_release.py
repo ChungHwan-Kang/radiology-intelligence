@@ -17,6 +17,20 @@ from test_native_provider_writeback import (
 
 
 class SiteFirstReleaseTests(unittest.TestCase):
+    def test_metadata_correction_preserves_editorial_body_and_is_discovered(self):
+        import hashlib
+        from site_first_release import publication_metadata
+        from verify_publication import ArticleParser, _blog_posting_jsonld
+        old = '<html><head><script type="application/ld+json">{"@type":"BlogPosting","headline":"Locked"}</script></head><body>Locked article</body></html>'
+        rendered = {"html": old, "published_date": "2026-11-20"}
+        fixed = publication_metadata(rendered)
+        self.assertEqual(old.split('<body>')[1], fixed['html'].split('<body>')[1])
+        parser = ArticleParser(); parser.feed(fixed['html'])
+        self.assertEqual(parser.published_times, ['2026-11-20T00:00:00+09:00'])
+        self.assertEqual(_blog_posting_jsonld(fixed['html'])[0]['datePublished'], parser.published_times[0])
+        self.assertEqual(fixed['public_html_sha256'], hashlib.sha256(fixed['html'].encode()).hexdigest())
+        self.assertEqual(publication_metadata(fixed), fixed)
+
     def setUp(self):
         self.prepared, self.github, self.contents, self.article = (
             ConnectedReleaseEndToEndTests()._prepared()
@@ -64,6 +78,25 @@ class SiteFirstReleaseTests(unittest.TestCase):
             code = main(["release-site", "NOT_VALID", "--receipt", "dummy.json"])
         self.assertEqual(code, 1)
         self.assertIn("BLOCKED INVALID_ARTICLE_ID", sink.getvalue())
+
+    def test_metadata_repair_reconciles_all_targets_and_writes_only_article(self):
+        from site_first_release import repair_site_metadata
+        rendered = self.prepared['bundle']['rendered']
+        rendered['published_date'] = '2026-11-20'
+        rendered['html'] = '<html><head><script type="application/ld+json">{"@type":"BlogPosting"}</script></head><body>Locked</body></html>'
+        path = self.prepared['plan']['required_targets'][0]
+        self.prepared['bundle']['contents'][path] = rendered['html']
+        self.prepared['bundle']['sha256'] = {}
+        self.github.files.update(self.prepared['bundle']['contents'])
+        fixed = repair_site_metadata(self.prepared, self.github, self.auth, self.tmp.name, fresh_duplicate_check=self.fresh)
+        self.assertEqual(self.github.writes, [path])
+        self.assertEqual(self.github.files, fixed['bundle']['contents'])
+        repair_site_metadata(self.prepared, self.github, self.auth, self.tmp.name, fresh_duplicate_check=self.fresh)
+        self.assertEqual(self.github.writes, [path])
+        self.github.files['index.html'] += 'concurrent edit'
+        with self.assertRaisesRegex(SiteFirstBlocked, 'REMOTE_CONFLICT'):
+            repair_site_metadata(self.prepared, self.github, self.auth, self.tmp.name, fresh_duplicate_check=self.fresh)
+        self.assertEqual(self.github.writes, [path])
 
     def test_github_live_pass_without_provider_mutation(self):
         result = self.release()

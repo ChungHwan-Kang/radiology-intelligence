@@ -9,6 +9,8 @@ The old all-or-nothing entry point is deliberately unchanged.
 from __future__ import annotations
 
 import hashlib
+import json
+import re
 
 from approved_publication_runtime import (
     _release_parts, execute_prepared_github_release, verify_prepared_live_release,
@@ -25,6 +27,63 @@ SYNC_DONE = "PUBLISHED_SYNC_DONE"
 
 class SiteFirstBlocked(ValueError):
     """No public or provider writes may follow an unverified boundary."""
+
+
+def publication_metadata(rendered):
+    """Add publication metadata only; preserve the approved editorial body."""
+    from copy import deepcopy
+    result = deepcopy(rendered)
+    page = result["html"]
+    stamp = result["published_date"] + "T00:00:00+09:00"
+    from verify_publication import ArticleParser, _blog_posting_jsonld
+    parser = ArticleParser()
+    parser.feed(page)
+    if not parser.published_times:
+        page = page.replace("</head>", '<meta property="article:published_time" content="' + stamp + '"></head>', 1)
+    def update(match):
+        obj = json.loads(match.group(2))
+        items = obj if isinstance(obj, list) else [obj]
+        for item in items:
+            if isinstance(item, dict) and item.get("@type") == "BlogPosting":
+                item.setdefault("datePublished", stamp)
+        return match.group(1) + json.dumps(obj, ensure_ascii=False).replace("</", "<\\/") + match.group(3)
+    page = re.sub(r'(<script\s+type="application/ld\+json"\s*>)(.*?)(</script>)', update, page, flags=re.S)
+    result["html"] = page
+    result["public_html_sha256"] = hashlib.sha256(page.encode()).hexdigest()
+    parser = ArticleParser(); parser.feed(page)
+    postings = _blog_posting_jsonld(page)
+    if len(parser.published_times) != 1 or not postings or not all(x.get("datePublished") for x in postings):
+        raise SiteFirstBlocked("PUBLICATION_METADATA_REQUIRED")
+    return result
+
+
+def repair_site_metadata(prepared, github, authorization, journal_dir, *, fresh_duplicate_check):
+    """Supervised metadata correction of an exact original five-file release."""
+    from copy import deepcopy
+    plan, contents, _ = _identity(prepared, authorization)
+    corrected = deepcopy(prepared)
+    rendered = publication_metadata(prepared["bundle"]["rendered"])
+    path = plan["required_targets"][0]
+    corrected["bundle"]["rendered"] = rendered
+    corrected["bundle"]["contents"][path] = rendered["html"]
+    corrected["bundle"]["sha256"][path] = rendered["public_html_sha256"]
+    with PrivateReleaseJournal(journal_dir, plan["article_id"], plan["approved_sha256"]) as journal:
+        _fresh_duplicates(prepared, fresh_duplicate_check)
+        shas = {p: github.read(p) for p in plan["required_targets"]}
+        for p in plan["required_targets"]:
+            allowed = (contents[p], corrected["bundle"]["contents"][p])
+            if github.read_content(p) not in allowed:
+                raise SiteFirstBlocked("METADATA_REPAIR_REMOTE_CONFLICT")
+        journal.append("SITE_METADATA_REPAIR_ATTEMPT", {"original_html_sha256": prepared["bundle"]["rendered"]["public_html_sha256"], "corrected_html_sha256": rendered["public_html_sha256"]})
+        if any(github.read(p) != shas[p] for p in shas):
+            raise SiteFirstBlocked("METADATA_REPAIR_REMOTE_CHANGED")
+        if github.read_content(path) != rendered["html"]:
+            github.write(path, rendered["html"], shas[path])
+        for p in plan["required_targets"]:
+            if github.read_content(p) != corrected["bundle"]["contents"][p]:
+                raise SiteFirstBlocked("METADATA_REPAIR_READBACK_FAILED")
+        journal.append("SITE_METADATA_REPAIR_GITHUB", {"status": "FIVE_TARGETS_READBACK_PASS", "corrected_html_sha256": rendered["public_html_sha256"]})
+    return corrected
 
 
 def _identity(prepared, authorization):

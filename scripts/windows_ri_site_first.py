@@ -29,7 +29,7 @@ from native_provider_writeback import (
 from native_sheets_duplicate_guard import build_native_duplicate_guard
 from native_sheets_reader import NativeSheetsReader
 from publication_transaction import plan_publish, render_approved_public_html
-from site_first_release import release_site, sync_records, SITE_DONE, SYNC_DONE
+from site_first_release import release_site, sync_records, SITE_DONE, SYNC_DONE, publication_metadata, repair_site_metadata
 from windows_ri_release import (
     DATA, REPO, TOKEN_NAMES, PRIVATE_DOI, github_api,
     contents_via_gh, private_file, sheets_via_native_http,
@@ -90,6 +90,11 @@ def _site_snapshot(plan, receipt, github, sheets, *, recover_sha):
             github, sheets, receipt["source_contract"])
         if prepared["plan"] != plan:
             raise ValueError("APPROVED_PLAN_CHANGED_DURING_PREFLIGHT")
+        rendered = publication_metadata(prepared["bundle"]["rendered"])
+        post = plan["required_targets"][0]
+        prepared["bundle"]["rendered"] = rendered
+        prepared["bundle"]["contents"][post] = rendered["html"]
+        prepared["bundle"]["sha256"][post] = rendered["public_html_sha256"]
         raw = json.dumps(
             {"published_at": receipt["published_at"], "prepared": prepared},
             ensure_ascii=False, sort_keys=True
@@ -101,9 +106,21 @@ def _site_snapshot(plan, receipt, github, sheets, *, recover_sha):
         print("ORIGINAL_SITE_PREFLIGHT_SHA256", hashlib.sha256(raw).hexdigest(), flush=True)
     if (prepared["plan"] != plan
             or prepared["source_contract"] != receipt["source_contract"]
-            or prepared["bundle"]["rendered"] != render_approved_public_html(
-                DATA, plan["article_id"], receipt["published_at"][:10])):
+            or prepared["bundle"]["rendered"] not in (
+                render_approved_public_html(DATA, plan["article_id"], receipt["published_at"][:10]),
+                publication_metadata(render_approved_public_html(DATA, plan["article_id"], receipt["published_at"][:10])))):
         raise ValueError("APPROVED_SITE_SNAPSHOT_IDENTITY_CHANGED")
+    correction = path.with_suffix(".metadata.json")
+    if correction.exists():
+        fixed = json.loads(private_file(correction).read_text(encoding="utf-8"))
+        if (fixed["original_snapshot_sha256"] != hashlib.sha256(raw).hexdigest()
+                or fixed["prepared"]["plan"] != plan
+                or fixed["prepared"]["bundle"]["rendered"] != publication_metadata(prepared["bundle"]["rendered"])
+                or fixed["prepared"]["bundle"]["contents"][plan["required_targets"][0]] != fixed["prepared"]["bundle"]["rendered"]["html"]
+                or any(fixed["prepared"]["bundle"]["contents"][p] != prepared["bundle"]["contents"][p]
+                       for p in plan["required_targets"][1:])):
+            raise ValueError("METADATA_CORRECTION_IDENTITY_CHANGED")
+        prepared = fixed["prepared"]
     return prepared
 
 
@@ -128,6 +145,7 @@ def main(argv=None):
     pub.add_argument("article_id")
     pub.add_argument("--receipt", required=True, type=Path)
     pub.add_argument("--recover", metavar="ORIGINAL_SITE_PREFLIGHT_SHA256")
+    pub.add_argument("--repair-metadata", action="store_true")
     sync = subs.add_parser("sync-records")
     sync.add_argument("article_id")
     sync.add_argument("--receipt", required=True, type=Path)
@@ -158,6 +176,23 @@ def main(argv=None):
             recover_sha=(args.recover if args.command == "release-site"
                          else args.site_snapshot_sha256))
         if args.command == "release-site":
+            if args.repair_metadata:
+                if not args.recover:
+                    raise ValueError("METADATA_REPAIR_ORIGINAL_SNAPSHOT_REQUIRED")
+                from copy import deepcopy
+                fixed = deepcopy(prepared)
+                rendered = publication_metadata(prepared["bundle"]["rendered"])
+                post = plan["required_targets"][0]
+                fixed["bundle"]["rendered"] = rendered
+                fixed["bundle"]["contents"][post] = rendered["html"]
+                fixed["bundle"]["sha256"][post] = rendered["public_html_sha256"]
+                correction = DATA / plan["article_id"] / ("site-first-" + plan["approved_sha256"] + ".metadata.json")
+                if not correction.exists():
+                    with correction.open("x", encoding="utf-8") as output:
+                        json.dump({"original_snapshot_sha256":args.recover,"prepared":fixed}, output, ensure_ascii=False, sort_keys=True)
+                        output.flush(); os.fsync(output.fileno())
+                prepared = repair_site_metadata(prepared, github, receipt["authorization"], DATA / "journal",
+                                                fresh_duplicate_check=_fresh_reader_guard(sheets, prepared))
             result = release_site(
                 prepared, github, receipt["authorization"], DATA / "journal",
                 fresh_duplicate_check=_fresh_reader_guard(sheets, prepared),
