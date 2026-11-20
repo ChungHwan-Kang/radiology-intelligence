@@ -55,6 +55,16 @@ class SiteFirstReleaseTests(unittest.TestCase):
             source_contract=research_source(),
             record_components=RECORD_COMPONENTS)
 
+    def test_windows_opt_in_cli_imports_and_rejects_invalid_id(self):
+        import contextlib
+        import io
+        from windows_ri_site_first import main
+        sink = io.StringIO()
+        with contextlib.redirect_stdout(sink):
+            code = main(["release-site", "NOT_VALID", "--receipt", "dummy.json"])
+        self.assertEqual(code, 1)
+        self.assertIn("BLOCKED INVALID_ARTICLE_ID", sink.getvalue())
+
     def test_github_live_pass_without_provider_mutation(self):
         result = self.release()
         self.assertEqual(result["status"], "PUBLISHED_SYNC_PENDING")
