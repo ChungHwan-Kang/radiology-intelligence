@@ -1,6 +1,13 @@
 name: RI publication integrity (read-only)
 on:
   workflow_dispatch:
+  pull_request:
+    paths:
+      - 'scripts/site_first_release.py'
+      - 'scripts/windows_ri_site_first.py'
+      - 'tests/test_site_first_release.py'
+      - 'docs/site-first-release.md'
+      - '.github/workflows/ri-publication-integrity.yml'
   push:
     paths:
       - 'posts/**'
@@ -39,6 +46,10 @@ on:
       - 'scripts/publication_site_composer.py'
       - 'scripts/live_publication_verifier.py'
       - 'scripts/approved_publication_runtime.py'
+      - 'scripts/site_first_release.py'
+      - 'scripts/windows_ri_site_first.py'
+      - 'tests/test_site_first_release.py'
+      - 'docs/site-first-release.md'
       - 'scripts/connected_publication_coordinator.py'
       - 'scripts/native_provider_writeback.py'
       - 'scripts/durable_release_runner.py'
