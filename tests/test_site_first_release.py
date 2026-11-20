@@ -100,6 +100,8 @@ class SiteFirstReleaseTests(unittest.TestCase):
             sync_records(self.prepared, self.github, self.auth, provider,
                          self.tmp.name, fetch=self.fetch)
         self.assertEqual(api.writes, [])
+        # An attempted sync before publication must not poison the journal.
+        self.assertEqual(self.release()["status"], "PUBLISHED_SYNC_PENDING")
 
     def test_sync_gate_rejects_provider_without_actual_external_lock(self):
         self.release()
