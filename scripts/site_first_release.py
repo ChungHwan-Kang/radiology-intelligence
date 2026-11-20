@@ -166,9 +166,14 @@ def sync_records(prepared, github_adapter, authorization, provider_adapter,
     provider component uses read-before-create for loss-of-ACK recovery.
     """
     plan, contents, components = _identity(prepared, authorization)
-    with PrivateReleaseJournal(journal_dir, plan["article_id"], plan["approved_sha256"]) as journal:
+    journal = PrivateReleaseJournal(journal_dir, plan["article_id"], plan["approved_sha256"])
+    # A premature sync must not create an empty ledger that later forces
+    # the first website publication into recovery mode.
+    if not journal.path.is_file() or not _site_history(journal.entries()):
+        raise SiteFirstBlocked("VERIFIED_SITE_PUBLICATION_REQUIRED")
+    with journal:
         history = journal.entries()
-        if not journal.preexisting or not _site_history(history):
+        if not _site_history(history):
             raise SiteFirstBlocked("VERIFIED_SITE_PUBLICATION_REQUIRED")
         if any(e["fields"]["event"] == "SYNC_RESULT"
                and e["fields"]["report"].get("status") == SYNC_DONE for e in history):
