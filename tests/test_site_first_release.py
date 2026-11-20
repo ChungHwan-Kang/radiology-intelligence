@@ -105,7 +105,7 @@ class SiteFirstReleaseTests(unittest.TestCase):
         self.release()
         api = FakeNativeHTTP()
         provider = self.provider(api, single_writer=False)
-        with self.assertRaisesRegex(SiteFirstBlocked, "PROVIDER_WRITE"):
+        with self.assertRaisesRegex(ValueError, "EXTERNAL_SINGLE_WRITER_LEASE_REQUIRED"):
             sync_records(self.prepared, self.github, self.auth, provider,
                          self.tmp.name, fetch=self.fetch)
         self.assertEqual(api.writes, [])
