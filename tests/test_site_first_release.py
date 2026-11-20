@@ -110,6 +110,20 @@ class SiteFirstReleaseTests(unittest.TestCase):
                          self.tmp.name, fetch=self.fetch)
         self.assertEqual(api.writes, [])
 
+    def test_sync_survives_later_article_index_updates(self):
+        self.release()
+        # A later legitimate article can extend all four shared site files.
+        # The exact RI-999 article bytes remain unchanged and linked.
+        for path in self.prepared["plan"]["required_targets"][1:]:
+            extra = "\n" if path.endswith(".xml") else "\n<!-- newer approved article -->"
+            self.github.files[path] += extra
+            self.contents[path] += extra
+        provider = self.provider(FakeNativeHTTP())
+        result = sync_records(self.prepared, self.github, self.auth, provider,
+                              self.tmp.name, fetch=self.fetch)
+        self.assertEqual(result["status"], "PUBLISHED_SYNC_DONE")
+        self.assertEqual(len(self.github.writes), 5)
+
     def test_provider_sync_retry_not_republish_github(self):
         self.release()
         api = FakeNativeHTTP()
