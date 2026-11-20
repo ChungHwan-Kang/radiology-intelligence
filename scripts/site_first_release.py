@@ -60,6 +60,39 @@ def _live(prepared, fetch):
     )
 
 
+
+
+def _verify_site_still_published(prepared, github_adapter, fetch):
+    """Allow subsequent articles to update indexes while RI article stays live.
+
+    The original website snapshot is immutable in the release journal, but
+    later publications may legitimately extend home/category/feed/sitemap.
+    """
+    import xml.etree.ElementTree as ET
+    from publication_site_composer import BASE
+
+    plan, _, _, original = _release_parts(prepared)
+    slug = plan["slug"]
+    paths = plan["required_targets"]
+    for path in paths:
+        remote = github_adapter.read_content(path)
+        if path == paths[0]:
+            if hashlib.sha256(remote.encode()).digest() != hashlib.sha256(
+                    original[path].encode()).digest():
+                raise SiteFirstBlocked("APPROVED_PUBLIC_ARTICLE_CHANGED")
+        elif slug not in remote:
+            raise SiteFirstBlocked("ARTICLE_MISSING_FROM_SITE_INDEX")
+        if path.endswith(".xml"):
+            try:
+                ET.fromstring(remote)
+            except ET.ParseError:
+                raise SiteFirstBlocked("SITE_INDEX_XML_INVALID") from None
+        status, live = fetch(BASE + path)
+        if status != 200 or live != remote:
+            raise SiteFirstBlocked("LIVE_SITE_READBACK_NOT_CURRENT")
+    return {"status": "LIVE_SITE_PRESENCE_PASS", "article_id": plan["article_id"]}
+
+
 def _fresh_duplicates(prepared, recheck):
     """Recheck authoritative native Sheet rows just before GitHub writes.
 
@@ -91,9 +124,9 @@ def release_site(prepared, github_adapter, authorization, journal_dir, *,
     with PrivateReleaseJournal(journal_dir, plan["article_id"], plan["approved_sha256"]) as journal:
         history = journal.entries()
         if _site_history(history):
-            live = _live(prepared, fetch)
+            live = _verify_site_still_published(prepared, github_adapter, fetch)
             return {"status": "ALREADY_PUBLISHED_SYNC_PENDING"
-                    if live["status"] == "LIVE_PUBLICATION_QA_PASS" else "LIVE_QA_RECHECK_BLOCKED",
+                    if live["status"] == "LIVE_SITE_PRESENCE_PASS" else "LIVE_QA_RECHECK_BLOCKED",
                     "article_id": plan["article_id"], "live": live,
                     "journal": str(journal.path), "public_write_performed": False}
         if journal.preexisting and not recover:
@@ -140,16 +173,9 @@ def sync_records(prepared, github_adapter, authorization, provider_adapter,
         if any(e["fields"]["event"] == "SYNC_RESULT"
                and e["fields"]["report"].get("status") == SYNC_DONE for e in history):
             return {"status": "SYNC_ALREADY_DONE", "journal": str(journal.path)}
-        # Recheck the actual current GitHub article/index/category/RSS/sitemap.
-        # A hash mismatch or unreadable path blocks ALL provider writes.
-        for path, expected in contents.items():
-            observed = github_adapter.read_content(path)
-            if hashlib.sha256(observed.encode("utf-8")).digest() != hashlib.sha256(
-                    expected.encode("utf-8")).digest():
-                raise SiteFirstBlocked("GITHUB_SITE_CHANGED_BEFORE_SYNC")
-        live = _live(prepared, fetch)
-        if live.get("status") != "LIVE_PUBLICATION_QA_PASS":
-            raise SiteFirstBlocked("LIVE_PUBLICATION_QA_REQUIRED_BEFORE_SYNC")
+        # Recheck canonical live site, but permit newer articles to change
+        # index/category/RSS/sitemap without blocking this article's sync.
+        _verify_site_still_published(prepared, github_adapter, fetch)
         provider_adapter.local_lock_held = True
         try:
             readiness = provider_adapter.assert_ready(list(components))
